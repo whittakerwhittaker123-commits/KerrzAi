@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KerrzAI Bot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            background: #0b132b;
+            color: white;
+            font-family: Arial;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: #1c2541;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px auto;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        button {
+            padding: 15px;
+            margin: 10px;
+            width: 80%;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+        }
+
+        .buy { background: green; }
+        .sell { background: red; }
+
+        .wait { color: orange; }
+    </style>
+</head>
+<body>
+
+<h1>KerrzAI 🤖</h1>
+
+<div class="card">
+    <h2 id="signal">Loading...</h2>
+    <p id="rsi"></p>
+</div>
+
+<button class="buy">BUY</button>
+<button class="sell">SELL</button>
+
+<script>
+async function loadSignal() {
+    try {
+        const res = await fetch('/signal');
+        const data = await res.json();
+
+        if (data.error) {
+            document.getElementById('signal').innerText = "Error loading data";
+            return;
+        }
+
+        document.getElementById('signal').innerText = "Signal: " + data.signal;
+        document.getElementById('rsi').innerText = "RSI: " + data.rsi;
+
+    } catch (e) {
+        document.getElementById('signal').innerText = "Connection error";
+    }
+}
+
+setInterval(loadSignal, 3000);
+loadSignal();
+</script>
+
+</body>
+</html>
