@@ -26,13 +26,13 @@ def home():
     <body>
         <h1>KerrzAI 🤖</h1>
 
-        <button onclick="scan()">Scan Market</button>
+        <button onclick="scan()">Analyze Market</button>
 
         <div id="signals"></div>
 
         <script>
         function scan() {
-            const pairs = ["Vol 10","Vol 25","Vol 50","Vol 75","Jump 25","Jump 50"];
+            const pairs = ["Vol 10","Vol 25","Vol 50","Vol 75","Jump 25","Jump 50","Jump 100"];
             let html = "";
 
             pairs.forEach(pair => {
