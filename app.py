@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-import websocket
+from websocket import WebSocketApp
 import json
 
 app = Flask(__name__)
@@ -52,7 +52,7 @@ def signal():
         return jsonify({"signal": "WAIT", "rsi": round(rsi,2)})
 
 def start_ws():
-    ws = websocket.WebSocketApp(
+    ws = WebSocketApp(
         "wss://ws.derivws.com/websockets/v3?app_id=1089",
         on_message=on_message
     )
