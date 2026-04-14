@@ -4,7 +4,7 @@ app = Flask(__name__)
 
 app.route('/')
 def home():
-    return '''
+    return  "App is live 🚀"
     <html>
 <head>
 <title>KerrzAI</title>
