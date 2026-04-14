@@ -55,14 +55,14 @@ def home():
     return render_template("index.html")
 
 
-@app.route("/signal")
+@@app.route("/signal")
 def signal():
     symbol = request.args.get("symbol", "R_100")
 
     prices = get_prices(symbol)
 
-    if not prices:
-        return jsonify({"error": "No data"})
+    if len(prices) < 10:
+        return jsonify({"error": "Not enough data"})
 
     rsi = calculate_rsi(prices)
 
