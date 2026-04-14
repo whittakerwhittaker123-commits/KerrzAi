@@ -1,6 +1,6 @@
 import os
 import json
-import websocket
+import websocket-client
 from flask import Flask, jsonify, render_template
 
 app = Flask(__name__)
