@@ -2,7 +2,7 @@ from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-@app.route('/')
+.app.route('/')
 def home():
     return '''
     <html>
@@ -74,7 +74,7 @@ loadSignals();
 </html>
     '''
 
-@app@app.route('/signals')
+@app.route('/signals')
 def signals():
     return jsonify([
         {"name": "Vol 10", "signal": "BUY", "rsi": 28},
