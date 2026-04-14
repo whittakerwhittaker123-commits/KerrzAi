@@ -6,99 +6,83 @@ app = Flask(__name__)
 def home():
     return '''
     <html>
-    <head>
-    <title>KerrzAI</title>
-    <style>
-    body {
-        margin:0;
-        font-family:Arial;
-        background:#0f172a;
-        color:white;
-        display:flex;
-    }
+<head>
+<title>KerrzAI</title>
 
-    .sidebar {
-        width:30%;
-        background:#111827;
-        padding:20px;
-    }
+<style>
+body {
+    margin:0;
+    font-family:Arial;
+    background:#0f172a;
+    color:white;
+}
 
-    .main {
-        width:70%;
-        padding:20px;
-    }
+.header {
+    padding:20px;
+    font-size:24px;
+}
 
-    .card {
-        background:#1f2937;
-        padding:15px;
-        margin-bottom:15px;
-        border-radius:10px;
-    }
+.grid {
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap:15px;
+    padding:20px;
+}
 
-    .buy {background:green; padding:15px; border-radius:10px; text-align:center;}
-    .sell {background:red; padding:15px; border-radius:10px; text-align:center;}
+.card {
+    background:#1f2937;
+    padding:15px;
+    border-radius:12px;
+}
 
-    button {
-        padding:10px;
-        margin:5px;
-        border:none;
-        border-radius:5px;
-        width:100%;
-    }
-    </style>
-    </head>
+.buy { color:lime; }
+.sell { color:red; }
+</style>
+</head>
 
-    <body>
+<body>
 
-    <div class="sidebar">
-        <h2>⚙️ Strategies</h2>
+<div class="header">KerrzAI 🤖</div>
 
-        <div class="card">RSI Strategy ✅</div>
-        <div class="card">Trend Strategy ⬜</div>
-        <div class="card">AI Filter ⬜</div>
-    </div>
+<div class="grid" id="marketGrid"></div>
 
-    <div class="main">
-        <h1>KerrzAI 🤖</h1>
+<script>
+async function loadSignals() {
+    let res = await fetch('/signals');
+    let data = await res.json();
 
+    let html = "";
+
+    data.forEach(pair => {
+        html += `
         <div class="card">
-            📊 Live Chart (coming soon)
+            <h3>${pair.name}</h3>
+            <p class="${pair.signal.toLowerCase()}">${pair.signal}</p>
+            <p>RSI: ${pair.rsi}</p>
         </div>
-
-        <div class="card" id="signalBox">
-            Loading signal...
-        </div>
-
-        <div class="buy">BUY</div>
-        <div class="sell">SELL</div>
-
-    </div>
-
-    <script>
-    async function loadSignal(){
-        let res = await fetch('/signal');
-        let data = await res.json();
-
-        document.getElementById("signalBox").innerHTML = `
-            Signal: ${data.signal || data.status}<br>
-            RSI: ${data.rsi || "-"}
         `;
-    }
+    });
 
-    setInterval(loadSignal, 3000);
-    loadSignal();
-    </script>
+    document.getElementById("marketGrid").innerHTML = html;
+}
 
-    </body>
-    </html>
+setInterval(loadSignals, 3000);
+loadSignals();
+</script>
+
+</body>
+</html>
     '''
 
-@app.route('/signal')
-def signal():
-    return jsonify({
-        "signal": "BUY",
-        "rsi": 28
-    })
+@app@app.route('/signals')
+def signals():
+    return jsonify([
+        {"name": "Vol 10", "signal": "BUY", "rsi": 28},
+        {"name": "Vol 25", "signal": "SELL", "rsi": 65},
+        {"name": "Vol 50", "signal": "BUY", "rsi": 32},
+        {"name": "Vol 75", "signal": "SELL", "rsi": 70},
+        {"name": "Vol 100", "signal": "BUY", "rsi": 25}
+    ])
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
