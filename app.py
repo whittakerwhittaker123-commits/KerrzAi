@@ -1,70 +1,104 @@
 from flask import Flask, jsonify
-from websocket import WebSocketApp
-import json
 
 app = Flask(__name__)
 
-price_data = []
+@app.route('/')
+def home():
+    return '''
+    <html>
+    <head>
+    <title>KerrzAI</title>
+    <style>
+    body {
+        margin:0;
+        font-family:Arial;
+        background:#0f172a;
+        color:white;
+        display:flex;
+    }
 
-def on_message(ws, message):
-    global price_data
-    data = json.loads(message)
+    .sidebar {
+        width:30%;
+        background:#111827;
+        padding:20px;
+    }
 
-    if "tick" in data:
-        price = data["tick"]["quote"]
-        price_data.append(price)
+    .main {
+        width:70%;
+        padding:20px;
+    }
 
-        if len(price_data) > 50:
-            price_data.pop(0)
+    .card {
+        background:#1f2937;
+        padding:15px;
+        margin-bottom:15px;
+        border-radius:10px;
+    }
 
-def get_rsi():
-    if len(price_data) < 14:
-        return None
+    .buy {background:green; padding:15px; border-radius:10px; text-align:center;}
+    .sell {background:red; padding:15px; border-radius:10px; text-align:center;}
 
-    gains = []
-    losses = []
+    button {
+        padding:10px;
+        margin:5px;
+        border:none;
+        border-radius:5px;
+        width:100%;
+    }
+    </style>
+    </head>
 
-    for i in range(1, len(price_data)):
-        diff = price_data[i] - price_data[i-1]
-        if diff > 0:
-            gains.append(diff)
-        else:
-            losses.append(abs(diff))
+    <body>
 
-    avg_gain = sum(gains)/len(gains) if gains else 0
-    avg_loss = sum(losses)/len(losses) if losses else 1
+    <div class="sidebar">
+        <h2>⚙️ Strategies</h2>
 
-    rs = avg_gain / avg_loss
-    return 100 - (100 / (1 + rs))
+        <div class="card">RSI Strategy ✅</div>
+        <div class="card">Trend Strategy ⬜</div>
+        <div class="card">AI Filter ⬜</div>
+    </div>
+
+    <div class="main">
+        <h1>KerrzAI 🤖</h1>
+
+        <div class="card">
+            📊 Live Chart (coming soon)
+        </div>
+
+        <div class="card" id="signalBox">
+            Loading signal...
+        </div>
+
+        <div class="buy">BUY</div>
+        <div class="sell">SELL</div>
+
+    </div>
+
+    <script>
+    async function loadSignal(){
+        let res = await fetch('/signal');
+        let data = await res.json();
+
+        document.getElementById("signalBox").innerHTML = `
+            Signal: ${data.signal || data.status}<br>
+            RSI: ${data.rsi || "-"}
+        `;
+    }
+
+    setInterval(loadSignal, 3000);
+    loadSignal();
+    </script>
+
+    </body>
+    </html>
+    '''
 
 @app.route('/signal')
 def signal():
-    rsi = get_rsi()
-
-    if rsi is None:
-        return jsonify({"status": "Collecting data..."})
-
-    if rsi < 30:
-        return jsonify({"signal": "BUY", "rsi": round(rsi,2)})
-    elif rsi > 70:
-        return jsonify({"signal": "SELL", "rsi": round(rsi,2)})
-    else:
-        return jsonify({"signal": "WAIT", "rsi": round(rsi,2)})
-
-def start_ws():
-    ws = WebSocketApp(
-        "wss://ws.derivws.com/websockets/v3?app_id=1089",
-        on_message=on_message
-    )
-
-    ws.on_open = lambda ws: ws.send(json.dumps({
-        "ticks": "R_50"
-    }))
-
-    ws.run_forever()
-
-import threading
-threading.Thread(target=start_ws).start()
+    return jsonify({
+        "signal": "BUY",
+        "rsi": 28
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
