@@ -1,24 +1,62 @@
-from flask import Flask, jsonify
-import random
+from flask import Flask
 
 app = Flask(__name__)
 
-@app.route("/")
-def signal():
-    signal = random.choice(["BUY", "SELL"])
+@app.route('/')
+def home():
+    return '''
+    <html>
+    <head>
+        <title>KerrzAI</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body { font-family: Arial; text-align: center; padding: 20px; }
+            .card {
+                border: 2px solid #ccc;
+                border-radius: 10px;
+                padding: 10px;
+                margin: 10px;
+            }
+            .buy { border-color: blue; }
+            .sell { border-color: red; }
+            .wait { border-color: orange; }
+        </style>
+    </head>
 
-    entry = 42000
+    <body>
+        <h1>KerrzAI 🤖</h1>
 
-    if signal == "BUY":
-        sl = entry - 1000
-        tp = entry + 2000
-    else:
-        sl = entry + 1000
-        tp = entry - 2000
+        <button onclick="scan()">Scan Market</button>
 
-    return jsonify({
-        "signal": signal,
-        "entry": entry,
-        "sl": sl,
-        "tp": tp
-    })
+        <div id="signals"></div>
+
+        <script>
+        function scan() {
+            const pairs = ["Vol 10","Vol 25","Vol 50","Vol 75","Jump 25","Jump 50"];
+            let html = "";
+
+            pairs.forEach(pair => {
+                let rsi = Math.floor(Math.random()*100);
+                let signal = "WAIT";
+                let cls = "wait";
+
+                if(rsi < 30){ signal="BUY"; cls="buy"; }
+                else if(rsi > 70){ signal="SELL"; cls="sell"; }
+
+                html += `
+                <div class="card ${cls}">
+                    <b>${pair}</b><br>
+                    Signal: ${signal}<br>
+                    RSI: ${rsi}
+                </div>`;
+            });
+
+            document.getElementById("signals").innerHTML = html;
+        }
+        </script>
+    </body>
+    </html>
+    '''
+
+if __name__ == "__main__":
+    app.run()
