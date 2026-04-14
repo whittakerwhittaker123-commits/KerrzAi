@@ -50,12 +50,12 @@ def calculate_rsi(prices, period=14):
     return round(100 - (100 / (1 + rs)), 2)
 
 
-@app.route("/")
+app.route("/")
 def home():
     return render_template("index.html")
 
 
-@@app.route("/signal")
+@app.route("/signal")
 def signal():
     symbol = request.args.get("symbol", "R_100")
 
