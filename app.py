@@ -1,40 +1,40 @@
 import os
 import json
-import websocket-client
-from flask import Flask, jsonify, render_template
+import websocket
+from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
-DERIV_APP_ID = "1089"  # public test app id
+DERIV_APP_ID = "1089"
 
-
-def get_price():
+def get_prices(symbol):
+    prices = []
     try:
         ws = websocket.create_connection(
             f"wss://ws.derivws.com/websockets/v3?app_id={DERIV_APP_ID}"
         )
 
-        request = {
-            "ticks": "R_100",
+        ws.send(json.dumps({
+            "ticks": symbol,
             "subscribe": 1
-        }
+        }))
 
-        ws.send(json.dumps(request))
-        result = json.loads(ws.recv())
+        for _ in range(30):
+            data = json.loads(ws.recv())
+            prices.append(data["tick"]["quote"])
+
         ws.close()
-
-        return result["tick"]["quote"]
+        return prices
 
     except:
-        return None
+        return []
 
 
 def calculate_rsi(prices, period=14):
     if len(prices) < period:
         return 50
 
-    gains = []
-    losses = []
+    gains, losses = [], []
 
     for i in range(1, len(prices)):
         diff = prices[i] - prices[i - 1]
@@ -47,9 +47,7 @@ def calculate_rsi(prices, period=14):
     avg_loss = sum(losses) / period if losses else 0.01
 
     rs = avg_gain / avg_loss
-    rsi = 100 - (100 / (1 + rs))
-
-    return round(rsi, 2)
+    return round(100 - (100 / (1 + rs)), 2)
 
 
 @app.route("/")
@@ -59,14 +57,11 @@ def home():
 
 @app.route("/signal")
 def signal():
-    prices = []
+    symbol = request.args.get("symbol", "R_100")
 
-    for _ in range(20):
-        price = get_price()
-        if price:
-            prices.append(price)
+    prices = get_prices(symbol)
 
-    if len(prices) == 0:
+    if not prices:
         return jsonify({"error": "No data"})
 
     rsi = calculate_rsi(prices)
@@ -79,6 +74,7 @@ def signal():
         signal = "WAIT"
 
     return jsonify({
+        "prices": prices,
         "rsi": rsi,
         "signal": signal
     })
