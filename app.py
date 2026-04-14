@@ -74,7 +74,7 @@ loadSignals();
 </html>
     '''
 
-@app.route('/signals')
+.app.route('/signals')
 def signals():
     return jsonify([
         {"name": "Vol 10", "signal": "BUY", "rsi": 28},
