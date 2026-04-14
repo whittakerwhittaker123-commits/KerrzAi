@@ -1,112 +1,57 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>KerrzAI Pro</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <style>
-        body {
-            background: #0b132b;
-            color: white;
-            font-family: Arial;
-            text-align: center;
-        }
-
-        .card {
-            margin: 20px auto;
-            padding: 20px;
-            width: 90%;
-            max-width: 500px;
-            border-radius: 12px;
-            background: #1c2541;
-            transition: 0.5s;
-        }
-
-        canvas {
-            margin-top: 15px;
-        }
-
-        .buy {
-            background: rgba(0,255,0,0.1);
-        }
-
-        .sell {
-            background: rgba(255,0,0,0.1);
-        }
-
-        select {
-            padding: 10px;
-            border-radius: 8px;
-        }
-    </style>
-</head>
-
-<body>
-
-<h1>KerrzAI 🤖</h1>
-
-<select id="symbol">
-    <option value="R_100">R_100</option>
-    <option value="R_50">R_50</option>
-    <option value="R_25">R_25</option>
-    <option value="R_10">R_10</option>
-    <option value="R_75">R_75</option>
-</select>
-
-<div id="card" class="card">
-    <h2 id="signal">Loading...</h2>
-    <p id="rsi"></p>
-
-    <canvas id="chart"></canvas>
-</div>
-
 <script>
 let chart;
 
 async function loadData() {
     const symbol = document.getElementById("symbol").value;
 
-    const res = await fetch(`/signal?symbol=${symbol}`);
-    const data = await res.json();
+    try {
+        const res = await fetch(`/signal?symbol=${symbol}`);
+        const data = await res.json();
 
-    const prices = data.prices;
-
-    document.getElementById("signal").innerText = data.signal;
-    document.getElementById("rsi").innerText = "RSI: " + data.rsi;
-
-    const card = document.getElementById("card");
-    card.classList.remove("buy", "sell");
-
-    if (data.signal === "BUY") {
-        card.classList.add("buy");
-    } else if (data.signal === "SELL") {
-        card.classList.add("sell");
-    }
-
-    if (chart) chart.destroy();
-
-    chart = new Chart(document.getElementById("chart"), {
-        type: "line",
-        data: {
-            labels: prices.map((_, i) => i),
-            datasets: [{
-                data: prices,
-                fill: true,
-                borderWidth: 2
-            }]
-        },
-        options: {
-            plugins: { legend: { display: false } },
-            scales: { x: { display: false } }
+        // ✅ HANDLE ERROR
+        if (data.error) {
+            document.getElementById("signal").innerText = "Waiting for data...";
+            document.getElementById("rsi").innerText = "";
+            return;
         }
-    });
+
+        const prices = data.prices;
+
+        document.getElementById("signal").innerText = data.signal;
+        document.getElementById("rsi").innerText = "RSI: " + data.rsi;
+
+        const card = document.getElementById("card");
+        card.classList.remove("buy", "sell");
+
+        if (data.signal === "BUY") {
+            card.classList.add("buy");
+        } else if (data.signal === "SELL") {
+            card.classList.add("sell");
+        }
+
+        if (chart) chart.destroy();
+
+        chart = new Chart(document.getElementById("chart"), {
+            type: "line",
+            data: {
+                labels: prices.map((_, i) => i),
+                datasets: [{
+                    data: prices,
+                    fill: true,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: { x: { display: false } }
+            }
+        });
+
+    } catch (err) {
+        document.getElementById("signal").innerText = "Connection error";
+    }
 }
 
 setInterval(loadData, 4000);
 loadData();
 </script>
-
-</body>
-</html>
