@@ -5,7 +5,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "KerrzAI is running 🚀"
+    return "return "NEW VERSION LOADED ✅"
 
 # ✅ THIS PART FIXES RENDER
 if __name__ == "__main__":
