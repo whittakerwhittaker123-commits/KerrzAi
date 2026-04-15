@@ -12,24 +12,33 @@ body {
   padding: 15px;
 }
 
+/* GRID */
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 15px;
 }
 
+/* CARDS */
 .card {
   background: linear-gradient(135deg,#ffb6c1,#ffc0cb);
   color: black;
   padding: 15px;
   border-radius: 20px;
   cursor: pointer;
+  transition: 0.3s;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.card:hover {
+  transform: scale(1.05);
 }
 
 .buy { border-left: 6px solid green; }
 .sell { border-left: 6px solid red; }
 .wait { border-left: 6px solid orange; }
 
+/* TRADE BOX */
 .trade-box {
   margin-top: 20px;
   padding: 20px;
@@ -38,6 +47,7 @@ body {
   border-radius: 20px;
 }
 
+/* DASHBOARD */
 .dashboard {
   display: flex;
   justify-content: space-around;
@@ -46,6 +56,31 @@ body {
   border-radius: 15px;
   margin-top: 15px;
   color: black;
+  font-weight: bold;
+}
+
+/* 🔥 PRO PANEL */
+.pro-panel {
+  margin-top: 20px;
+  padding: 15px;
+  background: #ffffff;
+  color: black;
+  border-radius: 15px;
+}
+
+.pro-panel h3 {
+  margin-top: 10px;
+}
+
+.pro-panel label {
+  display: block;
+  margin: 5px 0;
+}
+
+.pro-panel select,
+.pro-panel input {
+  width: 100%;
+  margin-bottom: 10px;
 }
 </style>
 </head>
@@ -54,23 +89,67 @@ body {
 
 <h2>KerrzAI Scanner 🤖</h2>
 
+<!-- 🔥 PAIRS -->
 <div id="grid" class="grid"></div>
 
+<!-- 🔥 TRADE DETAILS -->
 <div id="tradeBox" class="trade-box">
-Click a pair 👇
+  Click a pair 👇
 </div>
 
+<!-- 🔥 DASHBOARD -->
 <div class="dashboard">
   <div>Wins: <span id="wins">0</span></div>
   <div>Loss: <span id="loss">0</span></div>
   <div>Confidence: <span id="conf">0%</span></div>
 </div>
 
+<!-- 🔥 NEW PRO UI -->
+<div class="pro-panel">
+
+  <h3>⚙️ AI Settings</h3>
+
+  <label>Mode:</label>
+  <select id="mode">
+    <option>Sniper</option>
+    <option>Scalper</option>
+    <option>Smart Money</option>
+  </select>
+
+  <label>Min Confidence:</label>
+  <input type="range" id="minConf" min="50" max="95" value="70">
+  <span id="confVal">70%</span>
+
+  <hr>
+
+  <h3>📊 Filters</h3>
+
+  <label><input type="checkbox" checked> EMA Trend</label>
+  <label><input type="checkbox" checked> RSI Strength</label>
+  <label><input type="checkbox" checked> ATR Volatility</label>
+  <label><input type="checkbox" checked> BOS / Liquidity</label>
+
+  <hr>
+
+  <h3>🔔 Alerts</h3>
+
+  <label><input type="checkbox"> Popup Alerts</label>
+  <label><input type="checkbox"> Sound Alerts</label>
+
+</div>
+
 <script>
 
+// ===============================
+// 📡 LOAD SCANNER
+// ===============================
 async function loadScanner(){
   try {
-    const res = await fetch('/scan');
+
+    const mode = document.getElementById("mode").value;
+    const minConf = document.getElementById("minConf").value;
+
+    const res = await fetch(`/scan?mode=${mode}&min_conf=${minConf}`);
     const data = await res.json();
 
     let grid = document.getElementById("grid");
@@ -81,17 +160,17 @@ async function loadScanner(){
       let d = data[pair];
 
       let type = "wait";
-      if (d.signal.includes("BUY")) type = "buy";
-      if (d.signal.includes("SELL")) type = "sell";
+      if (d.signal && d.signal.includes("BUY")) type = "buy";
+      if (d.signal && d.signal.includes("SELL")) type = "sell";
 
       let card = document.createElement("div");
       card.className = "card " + type;
 
       card.innerHTML = `
         <h3>${pair}</h3>
-        <p><b>${d.signal}</b></p>
-        <p>${d.trend}</p>
-        <p>${d.confidence}%</p>
+        <p><b>${d.signal || "WAIT"}</b></p>
+        <p>${d.trend || "..."}</p>
+        <p>${d.confidence || 0}%</p>
       `;
 
       card.onclick = () => showTrade(pair, d);
@@ -104,27 +183,45 @@ async function loadScanner(){
   }
 }
 
+
+// ===============================
+// 📊 SHOW TRADE
+// ===============================
 function showTrade(pair, d){
+
   document.getElementById("tradeBox").innerHTML = `
     <h2>${pair}</h2>
-    <p><b>Trend:</b> ${d.trend}</p>
-    <p><b>Signal:</b> ${d.signal}</p>
+
+    <p><b>Trend:</b> ${d.trend || "-"}</p>
+    <p><b>Signal:</b> ${d.signal || "-"}</p>
 
     <hr>
 
-    <p><b>Entry:</b> ${d.entry}</p>
-    <p><b>TP:</b> ${d.tp}</p>
-    <p><b>SL:</b> ${d.sl}</p>
+    <p><b>Entry:</b> ${d.entry || "-"}</p>
+    <p><b>TP:</b> ${d.tp || "-"}</p>
+    <p><b>SL:</b> ${d.sl || "-"}</p>
 
     <hr>
 
-    <p><b>BOS:</b> ${d.bos}</p>
-    <p><b>Confidence:</b> ${d.confidence}%</p>
+    <p><b>BOS:</b> ${d.bos || "-"}</p>
+    <p><b>Confidence:</b> ${d.confidence || 0}%</p>
   `;
 
-  document.getElementById("conf").innerText = d.confidence + "%";
+  document.getElementById("conf").innerText = (d.confidence || 0) + "%";
 }
 
+
+// ===============================
+// 🎛 SLIDER UPDATE
+// ===============================
+document.getElementById("minConf").addEventListener("input", (e) => {
+  document.getElementById("confVal").innerText = e.target.value + "%";
+});
+
+
+// ===============================
+// 🔄 AUTO REFRESH
+// ===============================
 setInterval(loadScanner, 4000);
 loadScanner();
 
