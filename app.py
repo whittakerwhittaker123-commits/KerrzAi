@@ -280,37 +280,33 @@ def connect():
 # ===============================
 @app.route("/scan")
 def scan():
-@app.route("/scan")
-def scan():
-
-    mode = request.args.get("mode", "Sniper")
-    min_conf = int(request.args.get("min_conf", 10))  # 🔥 FIXED
-
     results = {}
 
     for pair, prices in market_data.items():
 
-        data = analyze(pair, prices)
-
-        # 🔥 ALWAYS SHOW PAIRS
-        if not data:
+        if len(prices) < 20:
             results[pair] = {
-                "pair": pair,
-                "trend": "WAITING",
                 "signal": "WAIT",
+                "trend": "WAITING DATA",
                 "entry": 0,
                 "tp": 0,
                 "sl": 0,
-                "bos": "N/A",
+                "bos": "NONE",
                 "confidence": 0
             }
             continue
 
-        # filter (but not too strict)
-        if data["confidence"] < min_conf:
-            results[pair] = data
-        else:
-            results[pair] = data
+        data = analyze(prices)
+
+        results[pair] = {
+            "signal": data["signal"],
+            "trend": data["trend"],
+            "entry": data["entry"],
+            "tp": data["tp"],
+            "sl": data["sl"],
+            "bos": data["bos"],
+            "confidence": data["confidence"]
+        }
 
     return jsonify(results)
 
