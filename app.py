@@ -120,8 +120,17 @@ def break_of_structure(prices):
 # ===============================
 def analyze(pair, prices):
 
-    if len(prices) < 30:
-        return None
+    if len(prices) < 10:
+    return {
+        "pair": pair,
+        "trend": "LOADING...",
+        "signal": "WAIT",
+        "entry": 0,
+        "tp": 0,
+        "sl": 0,
+        "bos": "N/A",
+        "confidence": 0
+    }
 
     current = prices[-1]
 
