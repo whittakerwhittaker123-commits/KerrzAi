@@ -25,30 +25,31 @@ market_data = {
 # ===============================
 def start_ws(symbol):
 
-    def on_message(ws, message):
-        data = json.loads(message)
+    import websocket
+import json
 
-        if "tick" in data:
-            price = data["tick"]["quote"]
-            market_data[symbol].append(price)
+def on_message(ws, message):
+    data = json.loads(message)
 
-            # keep last 200 prices
-            if len(market_data[symbol]) > 200:
-                market_data[symbol].pop(0)
+    if "tick" in data:
+        price = data["tick"]["quote"]
+        print("LIVE PRICE:", price)
 
-    def on_open(ws):
-        ws.send(json.dumps({
-            "ticks": symbol,
-            "subscribe": 1
-        }))
 
-    ws = websocket.WebSocketApp(
-        "wss://ws.derivws.com/websockets/v3?app_id=1089",
-        on_message=on_message,
-        on_open=on_open
-    )
+def on_open(ws):
+    ws.send(json.dumps({
+        "ticks": "R_10",
+        "subscribe": 1
+    }))
 
-    ws.run_forever()
+
+ws = websocket.WebSocketApp(
+    "wss://ws.derivws.com/websockets/v3?app_id=1089",
+    on_message=on_message,
+    on_open=on_open
+)
+
+ws.run_forever()
 
 
 # start all pairs
