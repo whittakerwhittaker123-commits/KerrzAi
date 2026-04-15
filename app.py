@@ -4,8 +4,9 @@ import websocket
 import json
 import threading
 TOKENS = {
-    "demo": "hryJ9bhA3hxZhSq",
+    "demo": "YOUR_DEMO_TOKEN",
     "real": "REAL_TOKEN"
+}
     account_info = {
     "balance": 0,
     "currency": "USD"
