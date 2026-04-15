@@ -1,45 +1,35 @@
-from flask import Flask, render_template, request, jsonify
-import websocket
-import json
+from flask import Flask, render_template, jsonify
+import websocket, json
 import numpy as np
-import time
 
 app = Flask(__name__)
 
 DERIV_APP_ID = "1089"
 
-@app.route("/")
-def home():
-    return render_template("index.html")
+PAIRS = ["R_10", "R_25", "R_50", "R_75", "R_100"]
 
 
-# ---------- GET LIVE DATA FROM DERIV ----------
-def get_deriv_prices(symbol="R_100", count=50):
-    prices = []
-
+# ---------- DERIV DATA ----------
+def get_prices(symbol):
     ws = websocket.create_connection(
         f"wss://ws.derivws.com/websockets/v3?app_id={DERIV_APP_ID}"
     )
 
     ws.send(json.dumps({
         "ticks_history": symbol,
-        "count": count,
+        "count": 60,
         "end": "latest",
         "style": "ticks"
     }))
 
-    result = json.loads(ws.recv())
-
+    res = json.loads(ws.recv())
     ws.close()
 
-    for tick in result["history"]["prices"]:
-        prices.append(float(tick))
-
-    return prices
+    return [float(p) for p in res["history"]["prices"]]
 
 
 # ---------- INDICATORS ----------
-def calculate_rsi(prices, period=14):
+def rsi(prices, period=14):
     deltas = np.diff(prices)
     gain = np.maximum(deltas, 0)
     loss = np.abs(np.minimum(deltas, 0))
@@ -48,60 +38,68 @@ def calculate_rsi(prices, period=14):
     avg_loss = np.mean(loss[:period])
 
     rs = avg_gain / (avg_loss + 1e-10)
-    rsi = 100 - (100 / (1 + rs))
-
-    return round(rsi, 2)
+    return 100 - (100 / (1 + rs))
 
 
-def calculate_ema(prices, period=20):
-    ema = [prices[0]]
+def ema(prices, period=20):
+    ema_vals = [prices[0]]
     k = 2 / (period + 1)
 
-    for price in prices[1:]:
-        ema.append(price * k + ema[-1] * (1 - k))
+    for p in prices[1:]:
+        ema_vals.append(p * k + ema_vals[-1] * (1 - k))
 
-    return ema
+    return ema_vals
 
 
-# ---------- AI ANALYSIS ----------
-def analyze_market(prices):
+# ---------- SMART MONEY LOGIC ----------
+def analyze(prices):
 
-    rsi = calculate_rsi(prices)
-    ema = calculate_ema(prices)
+    rsi_val = rsi(prices)
+    ema_vals = ema(prices)
 
     price = prices[-1]
-    ema_now = ema[-1]
-
     trend = "RANGE"
-    signal = "WAIT"
 
-    # TREND
-    if price > ema_now:
+    if price > ema_vals[-1]:
         trend = "UPTREND"
-    elif price < ema_now:
+    elif price < ema_vals[-1]:
         trend = "DOWNTREND"
 
+    # BOS (structure break)
+    high = max(prices[-10:])
+    low = min(prices[-10:])
+
+    bos = None
+    if price > high:
+        bos = "BOS_UP"
+    elif price < low:
+        bos = "BOS_DOWN"
+
+    signal = "WAIT"
+
     # ENTRY LOGIC
-    if trend == "UPTREND" and rsi < 35:
+    if trend == "UPTREND" and rsi_val < 40:
         signal = "BUY"
-    elif trend == "DOWNTREND" and rsi > 65:
+    elif trend == "DOWNTREND" and rsi_val > 60:
         signal = "SELL"
 
-    # TP / SL
-    volatility = np.std(prices)
+    # TP/SL
+    vol = np.std(prices)
 
     if signal == "BUY":
         entry = price
-        sl = entry - volatility * 1.5
-        tp = entry + volatility * 3
+        sl = entry - vol * 1.5
+        tp = entry + vol * 3
 
     elif signal == "SELL":
         entry = price
-        sl = entry + volatility * 1.5
-        tp = entry - volatility * 3
+        sl = entry + vol * 1.5
+        tp = entry - vol * 3
 
     else:
         entry, tp, sl = price, "-", "-"
+
+    confidence = min(95, int(abs(rsi_val - 50) * 2))
 
     return {
         "trend": trend,
@@ -109,28 +107,30 @@ def analyze_market(prices):
         "entry": round(entry, 2),
         "tp": round(tp, 2) if tp != "-" else "-",
         "sl": round(sl, 2) if sl != "-" else "-",
-        "rsi": rsi
+        "rsi": round(rsi_val, 2),
+        "bos": bos,
+        "confidence": confidence
     }
 
 
-# ---------- API ROUTE ----------
-@app.route("/signal")
-def signal():
-    symbol = request.args.get("symbol", "R_100")
+# ---------- ROUTES ----------
+@app.route("/")
+def home():
+    return render_template("index.html")
 
-    try:
-        prices = get_deriv_prices(symbol)
-        analysis = analyze_market(prices)
 
-        return jsonify({
-            "prices": prices,
-            **analysis
-        })
+@app.route("/scan")
+def scan():
+    results = {}
 
-    except Exception as e:
-        return jsonify({
-            "error": str(e)
-        })
+    for pair in PAIRS:
+        try:
+            prices = get_prices(pair)
+            results[pair] = analyze(prices)
+        except:
+            results[pair] = {"error": "Data failed"}
+
+    return jsonify(results)
 
 
 if __name__ == "__main__":
