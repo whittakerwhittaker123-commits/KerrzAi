@@ -6,91 +6,46 @@
 
 <style>
 body {
-  font-family: 'Segoe UI', sans-serif;
-  background: linear-gradient(135deg,#0f172a,#1e293b);
+  font-family: Arial;
+  background: linear-gradient(135deg,#1a1a2e,#16213e);
   color: white;
   padding: 15px;
 }
 
-/* HEADER */
-h2 {
-  margin-bottom: 15px;
-}
-
-/* GRID */
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 15px;
 }
 
-/* CARDS */
 .card {
-  background: linear-gradient(135deg,#fda4af,#fbcfe8);
+  background: linear-gradient(135deg,#ffb6c1,#ffc0cb);
   color: black;
-  padding: 18px;
+  padding: 15px;
   border-radius: 20px;
   cursor: pointer;
-  transition: 0.3s;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
 }
 
-.card:hover {
-  transform: scale(1.05);
-}
+.buy { border-left: 6px solid green; }
+.sell { border-left: 6px solid red; }
+.wait { border-left: 6px solid orange; }
 
-/* SIGNAL COLORS */
-.buy { border-left: 6px solid #22c55e; }
-.sell { border-left: 6px solid #ef4444; }
-.wait { border-left: 6px solid #f59e0b; }
-
-/* TRADE BOX */
 .trade-box {
   margin-top: 20px;
   padding: 20px;
-  background: linear-gradient(135deg,#fff,#f1f5f9);
+  background: #fff0f5;
   color: black;
   border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
-/* SECTION DIVIDER */
-hr {
-  margin: 10px 0;
-}
-
-/* CONFIDENCE BAR */
-.conf-bar {
-  height: 10px;
-  background: #ddd;
-  border-radius: 10px;
-  overflow: hidden;
-  margin-top: 10px;
-}
-
-.conf-fill {
-  height: 100%;
-  background: linear-gradient(90deg,#22c55e,#4ade80);
-}
-
-/* DASHBOARD */
 .dashboard {
   display: flex;
-  justify-content: space-between;
-  background: linear-gradient(135deg,#fbcfe8,#fda4af);
-  padding: 15px;
-  border-radius: 20px;
+  justify-content: space-around;
+  background: #ffe4e1;
+  padding: 12px;
+  border-radius: 15px;
   margin-top: 15px;
   color: black;
-  font-weight: bold;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-/* MOBILE */
-@media(max-width:600px){
-  .grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
 </head>
@@ -99,15 +54,12 @@ hr {
 
 <h2>KerrzAI Scanner 🤖</h2>
 
-<!-- 🔥 PAIR BOXES -->
 <div id="grid" class="grid"></div>
 
-<!-- 🔥 TRADE DETAILS -->
 <div id="tradeBox" class="trade-box">
-  Click a pair 👇
+Click a pair 👇
 </div>
 
-<!-- 🔥 DASHBOARD -->
 <div class="dashboard">
   <div>Wins: <span id="wins">0</span></div>
   <div>Loss: <span id="loss">0</span></div>
@@ -116,9 +68,6 @@ hr {
 
 <script>
 
-// ===============================
-// 📡 LOAD SCANNER DATA
-// ===============================
 async function loadScanner(){
   try {
     const res = await fetch('/scan');
@@ -131,20 +80,18 @@ async function loadScanner(){
 
       let d = data[pair];
 
-      let card = document.createElement("div");
-
-      // 🔥 SIGNAL COLORS
       let type = "wait";
-      if ((d.signal || "").includes("BUY")) type = "buy";
-      if ((d.signal || "").includes("SELL")) type = "sell";
+      if (d.signal.includes("BUY")) type = "buy";
+      if (d.signal.includes("SELL")) type = "sell";
 
+      let card = document.createElement("div");
       card.className = "card " + type;
 
       card.innerHTML = `
         <h3>${pair}</h3>
-        <p><b>${d.signal || "WAIT"}</b></p>
-        <p>${d.trend || "Analyzing..."}</p>
-        <p>${d.confidence || 0}% confidence</p>
+        <p><b>${d.signal}</b></p>
+        <p>${d.trend}</p>
+        <p>${d.confidence}%</p>
       `;
 
       card.onclick = () => showTrade(pair, d);
@@ -153,49 +100,31 @@ async function loadScanner(){
     });
 
   } catch (err) {
-    console.log("Error loading scanner", err);
+    console.log("Error loading scanner");
   }
 }
 
-
-// ===============================
-// 📊 SHOW TRADE DETAILS
-// ===============================
 function showTrade(pair, d){
-
-  let confidence = d.confidence || 0;
-
   document.getElementById("tradeBox").innerHTML = `
     <h2>${pair}</h2>
-
-    <p><b>Trend:</b> ${d.trend || "-"}</p>
-    <p><b>Signal:</b> ${d.signal || "-"}</p>
-
-    <hr>
-
-    <p><b>Entry:</b> ${d.entry || "-"}</p>
-    <p><b>Take Profit:</b> ${d.tp || "-"}</p>
-    <p><b>Stop Loss:</b> ${d.sl || "-"}</p>
+    <p><b>Trend:</b> ${d.trend}</p>
+    <p><b>Signal:</b> ${d.signal}</p>
 
     <hr>
 
-    <p><b>BOS:</b> ${d.bos || "-"}</p>
+    <p><b>Entry:</b> ${d.entry}</p>
+    <p><b>TP:</b> ${d.tp}</p>
+    <p><b>SL:</b> ${d.sl}</p>
 
-    <p><b>Confidence:</b> ${confidence}%</p>
+    <hr>
 
-    <div class="conf-bar">
-      <div class="conf-fill" style="width:${confidence}%"></div>
-    </div>
+    <p><b>BOS:</b> ${d.bos}</p>
+    <p><b>Confidence:</b> ${d.confidence}%</p>
   `;
 
-  // Dashboard update
-  document.getElementById("conf").innerText = confidence + "%";
+  document.getElementById("conf").innerText = d.confidence + "%";
 }
 
-
-// ===============================
-// 🔄 AUTO REFRESH
-// ===============================
 setInterval(loadScanner, 4000);
 loadScanner();
 
