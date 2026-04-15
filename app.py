@@ -237,12 +237,8 @@ def analyze(pair, prices):
 def home():
     return render_template("index.html")
 
-@app.route("/balance")
-def balance():
-    return jsonify(account_info)
-# ===============================
-# 🔐 CONNECT DERIV (PASTE HERE)
-# ===============================
+from flask import request, jsonify
+
 @app.route("/connect", methods=["POST"])
 def connect():
     try:
@@ -255,7 +251,9 @@ def connect():
         ws = websocket.WebSocket()
         ws.connect("wss://ws.derivws.com/websockets/v3?app_id=1089")
 
+        # Send token
         ws.send(json.dumps({"authorize": token}))
+
         response = json.loads(ws.recv())
 
         print("DERIV RESPONSE:", response)
@@ -266,18 +264,14 @@ def connect():
         account = response["authorize"]
 
         return jsonify({
-            "balance": account["balance"],
-            "currency": account["currency"]
+            "balance": account.get("balance", 0),
+            "currency": account.get("currency", "USD"),
+            "loginid": account.get("loginid", "Unknown")
         })
 
     except Exception as e:
         print("CONNECT ERROR:", str(e))
         return jsonify({"error": str(e)})
-
-
-# ===============================
-# 📡 SCAN
-# ===============================
 @app.route("/scan")
 def scan():
     results = {}
