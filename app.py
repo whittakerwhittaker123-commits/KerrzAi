@@ -30,7 +30,9 @@ import json
 
 def on_message(ws, message):
     data = json.loads(message)
-
+if "authorize" in data:
+    print("✅ Logged in:", data["authorize"]["loginid"])
+    print("💰 Balance:", data["authorize"]["balance"])
     if "tick" in data:
         price = data["tick"]["quote"]
         print("LIVE PRICE:", price)
