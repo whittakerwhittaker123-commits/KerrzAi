@@ -18,9 +18,9 @@ app = Flask(__name__)
 
 functions (analyze, etc)
 
-@app.route("/")        ✅
-@app.route("/connect") ✅ ← HERE
-@app.route("/scan")    ✅
+@app.route("/")       
+@app.route("/connect")  ← HERE
+@app.route("/scan")    
 
 if __name__ == "__main__":
     app.run()
@@ -48,12 +48,12 @@ def on_message(ws, message):
     try:
         data = json.loads(message)
 
-        # ✅ HANDLE LOGIN RESPONSE
+        # HANDLE LOGIN RESPONSE
         if "authorize" in data:
-            print("✅ Logged in:", data["authorize"]["loginid"])
+            print("Logged in:", data["authorize"]["loginid"])
             print("💰 Balance:", data["authorize"]["balance"])
 
-        # ✅ HANDLE PRICE DATA
+        # HANDLE PRICE DATA
         if "tick" in data:
             price = data["tick"]["quote"]
 
@@ -67,7 +67,7 @@ def on_message(ws, message):
 
 
 def on_open(ws):
-    # 🔐 LOGIN TO DERIV ACCOUNT
+    # LOGIN TO DERIV ACCOUNT
     ws.send(json.dumps({
         "authorize": DERIV_TOKEN
     }))
