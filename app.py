@@ -37,8 +37,14 @@ def on_message(ws, message):
 
 
 def on_open(ws):
+    # 🔐 LOGIN TO DERIV ACCOUNT
     ws.send(json.dumps({
-        "ticks": "R_10",
+        "authorize": DERIV_TOKEN
+    }))
+
+    # 📡 SUBSCRIBE TO LIVE DATA
+    ws.send(json.dumps({
+        "ticks": symbol,
         "subscribe": 1
     }))
 
