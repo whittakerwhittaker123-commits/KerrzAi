@@ -6,9 +6,9 @@
 
 <style>
 body {
-  font-family: Arial;
+  font-family: Bold;
   background: linear-gradient(135deg,#1a1a2e,#16213e);
-  color: white;
+  color: pink;
   padding: 15px;
 }
 
@@ -90,6 +90,21 @@ body {
 <h2>KerrzAI Scanner 🤖</h2>
 
 <!-- 🔥 PAIRS -->
+  <!-- 🔐 DERIV LOGIN PANEL -->
+<div class="login-box">
+  <h3>🔐 Connect Deriv</h3>
+
+  <select id="accountType">
+    <option value="demo">Demo</option>
+    <option value="real">Real</option>
+  </select>
+
+  <input id="tokenInput" placeholder="Enter API Token" />
+
+  <button onclick="connectAccount()">Connect</button>
+
+  <p id="loginStatus">Not connected</p>
+</div>
 <div id="grid" class="grid"></div>
 
 <!-- 🔥 TRADE DETAILS -->
