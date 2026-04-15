@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -279,6 +279,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 });
+</script>
+    <script>
+async function connectDeriv() {
+    const token = document.getElementById("tokenInput").value;
+
+    const res = await fetch("/connect", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ token: token })
+    });
+
+    const data = await res.json();
+
+    console.log("CONNECT RESPONSE:", data);
+
+    if (data.error) {
+        document.getElementById("status").innerText = "❌ " + data.error;
+        return;
+    }
+
+    document.getElementById("status").innerText =
+        "✅ Connected: " + data.loginid + " | " + data.balance + " " + data.currency;
+}
 </script>
 </body>
 </html>
