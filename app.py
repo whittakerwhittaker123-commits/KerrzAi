@@ -19,7 +19,7 @@ app = Flask(__name__)
 functions (analyze, etc)
 
 @app.route("/")       
-@app.route("/connect")  ← HERE
+@app.route("/connect") 
 @app.route("/scan")    
 
 if __name__ == "__main__":
