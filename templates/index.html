@@ -1,93 +1,105 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>KerrzAI Pro</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KerrzAI 💅</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<style>
-body {
-    margin: 0;
-    font-family: Arial;
-    background: #0b132b;
-    color: white;
-}
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: white;
+      padding: 15px;
+    }
 
-/* GRID */
-.pairs-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    padding: 10px;
-}
+    h1 {
+      text-align: center;
+    }
 
-/* CARDS */
-.pair-card {
-    background: linear-gradient(135deg, #ffb6c1, #ffc0cb);
-    padding: 15px;
-    border-radius: 20px;
-    cursor: pointer;
-    color: black;
-}
+    /* Grid */
+    .pairs-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
 
-.pair-card:hover {
-    transform: scale(1.05);
-}
+    .pair-card {
+      background: linear-gradient(135deg, #ffb6c1, #ffc0cb);
+      color: black;
+      padding: 15px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
 
-.trade-box {
-    margin: 20px;
-    padding: 20px;
-    background: #fff0f5;
-    border-radius: 20px;
-    color: black;
-}
+    .pair-card:hover {
+      transform: scale(1.05);
+    }
 
-/* DASHBOARD */
-.dashboard {
-    display: flex;
-    justify-content: space-around;
-    background: #ffe4e1;
-    padding: 15px;
-    border-radius: 15px;
-    margin: 20px;
-    color: black;
-}
+    /* Trade Box */
+    .trade-box {
+      margin-top: 20px;
+      padding: 20px;
+      background: #fff0f5;
+      border-radius: 20px;
+      color: black;
+    }
 
-/* MAIN CARD */
-.card {
-    background: #1c2541;
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-}
+    /* Signal colors */
+    .buy { color: green; }
+    .sell { color: red; }
+    .wait { color: orange; }
 
-.buy { background: rgba(0,255,0,0.2); }
-.sell { background: rgba(255,0,0,0.2); }
+    /* Dashboard */
+    .dashboard {
+      display: flex;
+      justify-content: space-around;
+      background: #ffe4e1;
+      padding: 15px;
+      border-radius: 15px;
+      color: black;
+      margin-top: 20px;
+    }
 
-canvas { margin-top: 15px; }
+    canvas {
+      margin-top: 20px;
+      background: white;
+      border-radius: 10px;
+    }
 
-.btn {
-    padding: 10px;
-    margin: 5px;
-    border: none;
-    border-radius: 8px;
-}
-
-.buy-btn { background: green; color: white; }
-.sell-btn { background: red; color: white; }
-
-</style>
+  </style>
 </head>
 
 <body>
 
-<h2>📊 Market Scanner</h2>
+<h1>KerrzAI 🤖</h1>
 
+<!-- PAIRS -->
 <div class="pairs-grid">
-  <div class="pair-card" onclick="openPair('Volatility 10')">Volatility 10</div>
-  <div class="pair-card" onclick="openPair('Volatility 25')">Volatility 25</div>
-  <div class="pair-card" onclick="openPair('Volatility 75')">Volatility 75</div>
+
+  <div class="pair-card" onclick="loadPair('R_10', 'Volatility 10')">
+    <h3>Volatility 10</h3>
+  </div>
+
+  <div class="pair-card" onclick="loadPair('R_25', 'Volatility 25')">
+    <h3>Volatility 25</h3>
+  </div>
+
+  <div class="pair-card" onclick="loadPair('R_50', 'Volatility 50')">
+    <h3>Volatility 50</h3>
+  </div>
+
+  <div class="pair-card" onclick="loadPair('R_75', 'Volatility 75')">
+    <h3>Volatility 75</h3>
+  </div>
+
+  <div class="pair-card" onclick="loadPair('R_100', 'Volatility 100')">
+    <h3>Volatility 100</h3>
+  </div>
+
 </div>
 
 <!-- TRADE BOX -->
@@ -95,73 +107,60 @@ canvas { margin-top: 15px; }
   <h2>Select a pair</h2>
 </div>
 
-<!-- MAIN AI CARD -->
-<div class="card" id="card">
-    <h2 id="signal">Loading...</h2>
-    <p id="rsi"></p>
-    <canvas id="chart"></canvas>
-
-    <button class="btn buy-btn">BUY</button>
-    <button class="btn sell-btn">SELL</button>
-</div>
+<!-- CHART -->
+<canvas id="chart"></canvas>
 
 <!-- DASHBOARD -->
-<h2>📈 Performance</h2>
 <div class="dashboard">
-  <div>Wins: 0</div>
-  <div>Losses: 0</div>
-  <div>Live: 1</div>
+  <div>Wins: <span id="wins">0</span></div>
+  <div>Losses: <span id="losses">0</span></div>
+  <div>Live Trades: <span id="live">0</span></div>
 </div>
 
 <script>
-
-// CLICKABLE PAIRS
-function openPair(pair) {
-
-  const data = {
-    "Volatility 10": {trend:"UPTREND", entry:"1234", tp:"1250", sl:"1200", signal:"BUY"},
-    "Volatility 25": {trend:"DOWNTREND", entry:"5432", tp:"5300", sl:"5500", signal:"SELL"},
-    "Volatility 75": {trend:"RANGE", entry:"--", tp:"--", sl:"--", signal:"WAIT"}
-  };
-
-  let d = data[pair];
-
-  document.getElementById("tradeBox").innerHTML = `
-    <h2>${pair}</h2>
-    <p>Trend: ${d.trend}</p>
-    <p>Signal: ${d.signal}</p>
-    <p>Entry: ${d.entry}</p>
-    <p>TP: ${d.tp}</p>
-    <p>SL: ${d.sl}</p>
-  `;
-}
-
-// FAKE CHART DATA (replace later with real API)
 let chart;
 
-function loadData() {
-    let prices = Array.from({length: 20}, () => Math.random() * 100);
+async function loadPair(symbol, name) {
 
-    document.getElementById("signal").innerText = "AI SCANNING...";
-    document.getElementById("rsi").innerText = "RSI: 50";
+  const res = await fetch(`/signal?symbol=${symbol}`);
+  const data = await res.json();
 
-    if (chart) chart.destroy();
+  // Update trade box
+  document.getElementById("tradeBox").innerHTML = `
+    <h2>${name}</h2>
+    <p><b>Trend:</b> ${data.trend}</p>
+    <p class="${data.signal.toLowerCase()}"><b>Signal:</b> ${data.signal}</p>
+    <p><b>Entry:</b> ${data.entry}</p>
+    <p><b>Take Profit:</b> ${data.tp}</p>
+    <p><b>Stop Loss:</b> ${data.sl}</p>
+  `;
 
-    chart = new Chart(document.getElementById("chart"), {
-        type: "line",
-        data: {
-            labels: prices.map((_, i) => i),
-            datasets: [{
-                data: prices,
-                borderWidth: 2
-            }]
-        }
-    });
+  // Chart
+  if (chart) chart.destroy();
+
+  chart = new Chart(document.getElementById("chart"), {
+    type: "line",
+    data: {
+      labels: data.prices.map((_, i) => i),
+      datasets: [{
+        data: data.prices,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // Dashboard update (simple demo logic)
+  if (data.signal === "BUY") {
+    document.getElementById("wins").innerText++;
+  } else if (data.signal === "SELL") {
+    document.getElementById("losses").innerText++;
+  }
+
+  document.getElementById("live").innerText = 1;
 }
-
-setInterval(loadData, 3000);
-loadData();
-
 </script>
 
 </body>
