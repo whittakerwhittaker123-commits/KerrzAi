@@ -5,7 +5,13 @@ hun<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+.dashboard {
+  display: flex;
+  justify-content: space-around;
+  background: #ffe4e1;
+  padding: 15px;
+  border-radius: 15px;
+}
     <style>
         body {
             margin: 0;
@@ -92,11 +98,63 @@ hun<!DOCTYPE html>
             background: red;
             color: white;
         }
+        .trade-box {
+  margin-top: 20px;
+  padding: 20px;
+  background: #fff0f5;
+  border-radius: 20px;
+  color: black;
+}
     </style>
+    .pairs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+<div id="tradeBox" class="trade-box">
+  <h2>Select a pair to see analysis</h2>
+</div>
+.pair-card {
+  background: linear-gradient(135deg, #ffb6c1, #ffc0cb);
+  padding: 15px;
+  border-radius: 20px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.pair-card:hover {
+  transform: scale(1.05);
+}
+
+.trend.up { color: green; }
+.trend.down { color: red; }
 </head>
 
 <body>
+<h2>📊 Market Scanner</h2>
 
+<div class="pairs-grid">
+
+  <div class="pair-card" onclick="openPair('Volatility 10')">
+    <h3>Volatility 10</h3>
+    <p>Trend: <span class="trend up">UPTREND</span></p>
+    <p>Signal: BUY</p>
+  </div>
+
+  <div class="pair-card" onclick="openPair('Volatility 25')">
+    <h3>Volatility 25</h3>
+    <p>Trend: <span class="trend down">DOWNTREND</span></p>
+    <p>Signal: SELL</p>
+  </div>
+
+  <div class="pair-card" onclick="openPair('Volatility 75')">
+    <h3>Volatility 75</h3>
+    <p>Trend: RANGE</p>
+    <p>Signal: WAIT</p>
+  </div>
+
+</div>
     <div class="option">
     Account:
     <select id="accountType">
@@ -246,5 +304,54 @@ function connectDeriv(accountType) {
 document.getElementById("accountType").addEventListener("change", (e) => {
     connectDeriv(e.target.value);
 });
+    <script>
+
+function openPair(pair) {
+
+  // Fake AI analysis (we upgrade later)
+  let data = {
+    "Volatility 10": {
+      trend: "UPTREND",
+      entry: "1234.50",
+      tp: "1250.00",
+      sl: "1220.00",
+      signal: "BUY"
+    },
+    "Volatility 25": {
+      trend: "DOWNTREND",
+      entry: "5432.10",
+      tp: "5300.00",
+      sl: "5500.00",
+      signal: "SELL"
+    },
+    "Volatility 75": {
+      trend: "RANGE",
+      entry: "--",
+      tp: "--",
+      sl: "--",
+      signal: "WAIT"
+    }
+  };
+
+  let d = data[pair];
+
+  document.getElementById("tradeBox").innerHTML = `
+    <h2>${pair}</h2>
+    <p><b>Trend:</b> ${d.trend}</p>
+    <p><b>Signal:</b> ${d.signal}</p>
+    <p><b>Entry:</b> ${d.entry}</p>
+    <p><b>Take Profit:</b> ${d.tp}</p>
+    <p><b>Stop Loss:</b> ${d.sl}</p>
+  `;
+}
+
+</script>
+    <h2>📈 Performance Dashboard</h2>
+
+<div class="dashboard">
+  <div>Wins: 0</div>
+  <div>Losses: 0</div>
+  <div>Live Trades: 1</div>
+</div>
 </body>
 </html>
