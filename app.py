@@ -34,17 +34,17 @@ def stream_prices(symbol):
             while True:
                 data = json.loads(ws.recv())
 
-                if "tick" in data:
+                # ✅ SAFE CHECK
+                if "tick" in data and "quote" in data["tick"]:
                     price = data["tick"]["quote"]
 
                     price_data[symbol].append(price)
 
-                    # keep last 50 values
                     if len(price_data[symbol]) > 50:
                         price_data[symbol].pop(0)
 
         except Exception as e:
-            print(f"Error in {symbol}: {e}")
+            print(f"Stream error ({symbol}):", e)
             continue  # reconnect automatically
 
 
