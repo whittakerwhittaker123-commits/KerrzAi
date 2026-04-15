@@ -57,43 +57,35 @@ def start_all():
 # ===============================
 def analyze(prices):
     if len(prices) < 10:
-    return {
-        "signal": "WAIT",
-        "trend": "WAITING DATA",
-        "entry": 0,
-        "tp": 0,
-        "sl": 0,
-        "confidence": 0
-    }
+        return {
+            "signal": "WAIT",
+            "trend": "WAITING DATA",
+            "entry": 0,
+            "tp": 0,
+            "sl": 0,
+            "confidence": 0
+        }
 
     current = prices[-1]
-    avg = np.mean(prices[-20:])
+    avg = sum(prices[-10:]) / 10
 
     trend = "UPTREND" if current > avg else "DOWNTREND"
 
-    signal = "WAIT"
     if current > avg:
         signal = "BUY"
     elif current < avg:
         signal = "SELL"
-
-    entry = current
-    tp = current + 5
-    sl = current - 5
-
-    confidence = int(abs(current - avg) * 10)
-    if confidence > 95:
-        confidence = 95
+    else:
+        signal = "WAIT"
 
     return {
         "signal": signal,
         "trend": trend,
-        "entry": round(entry, 2),
-        "tp": round(tp, 2),
-        "sl": round(sl, 2),
-        "confidence": confidence
+        "entry": round(current, 2),
+        "tp": round(current + 5, 2),
+        "sl": round(current - 5, 2),
+        "confidence": 70
     }
-
 
 # ===============================
 # 🌐 ROUTES
