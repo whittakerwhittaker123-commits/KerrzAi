@@ -172,7 +172,7 @@ body {
 <!-- 🔥 TRADE DETAILS -->
 <div id="tradeBox" class="trade-box">
   
-<p>Click a pair 👇</p>
+<button onclick="loadPairs()">Click a pair 👇</button>
 <div id="pairsContainer" class="grid"></div>
   
 
@@ -222,33 +222,34 @@ body {
 // ===============================
 // 📡 LOAD SCANNER
 // ===============================
-async function loadScanner(){
-    try {
-        const res = await fetch('/scan');
-        const data = await res.json();
+<script>
+async function loadPairs() {
+    const res = await fetch("/scan");
+    const data = await res.json();
 
-        let grid = document.getElementById("grid");
-        grid.innerHTML = "";
+    const container = document.getElementById("pairsContainer");
+    container.innerHTML = "";
 
-        Object.keys(data).forEach(pair => {
-            let d = data[pair];
+    for (const pair in data) {
+        const d = data[pair];
 
-            let card = document.createElement("div");
-            card.className = "card";
+        const box = document.createElement("div");
+        box.className = "box";
 
-            card.innerHTML = `
-                <h3>${pair}</h3>
-                <p>${d.signal}</p>
-                <p>${d.trend}</p>
-                <p>${d.confidence}%</p>
-            `;
+        box.innerHTML = `
+            <h3>${pair}</h3>
+            <p>${d.signal}</p>
+            <p>${d.trend}</p>
+            <p>Entry: ${d.entry || 0}</p>
+            <p>TP: ${d.tp || 0}</p>
+            <p>SL: ${d.sl || 0}</p>
+            <p>${d.confidence || 0}%</p>
+        `;
 
-            grid.appendChild(card);
-        });
-
-    } catch (err) {
-        console.log("Error loading scanner");
+        container.appendChild(box);
     }
+}
+</script>
 }
 
 
