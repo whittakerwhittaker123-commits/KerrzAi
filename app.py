@@ -81,38 +81,41 @@ def calculate_rsi(prices, period=14):
 
 
 # ✅ ROUTES
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-
 @app.route("/signal")
 def signal():
-    symbol = request.args.get("symbol", "R_100")
+    try:
+        symbol = request.args.get("symbol", "R_100")
+        prices = price_data.get(symbol, [])
 
-    prices = price_data.get(symbol, [])
+        if len(prices) < 10:
+            return jsonify({
+                "prices": prices,
+                "rsi": 50,
+                "signal": "WAIT"
+            })
 
-    if len(prices) < 10:
+        rsi = calculate_rsi(prices)
+
+        if rsi < 30:
+            sig = "BUY"
+        elif rsi > 70:
+            sig = "SELL"
+        else:
+            sig = "WAIT"
+
         return jsonify({
             "prices": prices,
+            "rsi": rsi,
+            "signal": sig
+        })
+
+    except Exception as e:
+        print("Signal error:", e)
+        return jsonify({
+            "prices": [],
             "rsi": 50,
             "signal": "WAIT"
         })
-
-    rsi = calculate_rsi(prices)
-
-    if rsi < 30:
-        signal = "BUY"
-    elif rsi > 70:
-        signal = "SELL"
-    else:
-        signal = "WAIT"
-
-    return jsonify({
-        "prices": prices,
-        "rsi": rsi,
-        "signal": signal
-    })
 
 
 # ✅ START STREAMS AFTER APP LOAD (IMPORTANT FIX)
