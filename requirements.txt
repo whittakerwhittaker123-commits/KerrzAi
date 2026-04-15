@@ -1,7 +1,5 @@
 flask
-numpy
-websocket-client
-flask
 gunicorn
+websocket-client
 numpy
 pandas
