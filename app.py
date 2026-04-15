@@ -3,7 +3,10 @@ import numpy as np
 import websocket
 import json
 import threading
-
+TOKENS = {
+    "demo": "hryJ9bhA3hxZhSq",
+    "real": "REAL_TOKEN"
+}
 app = Flask(__name__)
 
 # ===============================
