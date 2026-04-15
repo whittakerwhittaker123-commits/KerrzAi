@@ -23,7 +23,7 @@ functions (analyze, etc)
 @app.route("/scan")    
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
 
 # ===============================
 # 📡 MARKET DATA STORE
