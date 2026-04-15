@@ -29,13 +29,25 @@ def start_ws(symbol):
 import json
 
 def on_message(ws, message):
-    data = json.loads(message)
-if "authorize" in data:
-    print("✅ Logged in:", data["authorize"]["loginid"])
-    print("💰 Balance:", data["authorize"]["balance"])
-    if "tick" in data:
-        price = data["tick"]["quote"]
-        print("LIVE PRICE:", price)
+    try:
+        data = json.loads(message)
+
+        # ✅ HANDLE LOGIN RESPONSE
+        if "authorize" in data:
+            print("✅ Logged in:", data["authorize"]["loginid"])
+            print("💰 Balance:", data["authorize"]["balance"])
+
+        # ✅ HANDLE PRICE DATA
+        if "tick" in data:
+            price = data["tick"]["quote"]
+
+            market_data[symbol].append(price)
+
+            if len(market_data[symbol]) > 200:
+                market_data[symbol].pop(0)
+
+    except Exception as e:
+        print("❌ Error:", e)
 
 
 def on_open(ws):
