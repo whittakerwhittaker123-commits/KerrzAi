@@ -204,44 +204,34 @@ body {
 // 📡 LOAD SCANNER
 // ===============================
 async function loadScanner(){
-  try {
+    try {
+        const res = await fetch('/scan');
+        const data = await res.json();
 
-    const mode = document.getElementById("mode").value;
-    const minConf = document.getElementById("minConf").value;
+        let grid = document.getElementById("grid");
+        grid.innerHTML = "";
 
-    const res = await fetch(`/scan?mode=${mode}&min_conf=${minConf}`);
-    const data = await res.json();
+        Object.keys(data).forEach(pair => {
+            let d = data[pair];
 
-    let grid = document.getElementById("grid");
-    grid.innerHTML = "";
+            let card = document.createElement("div");
+            card.className = "card";
 
-    Object.keys(data).forEach(pair => {
+            card.innerHTML = `
+                <h3>${pair}</h3>
+                <p>${d.signal}</p>
+                <p>${d.trend}</p>
+                <p>${d.confidence}%</p>
+            `;
 
-      let d = data[pair];
+            grid.appendChild(card);
+        });
 
-      let type = "wait";
-      if (d.signal && d.signal.includes("BUY")) type = "buy";
-      if (d.signal && d.signal.includes("SELL")) type = "sell";
-
-      let card = document.createElement("div");
-      card.className = "card " + type;
-
-      card.innerHTML = `
-        <h3>${pair}</h3>
-        <p><b>${d.signal || "WAIT"}</b></p>
-        <p>${d.trend || "..."}</p>
-        <p>${d.confidence || 0}%</p>
-      `;
-
-      card.onclick = () => showTrade(pair, d);
-
-      grid.appendChild(card);
-    });
-
-  } catch (err) {
-    console.log("Error loading scanner");
-  }
+    } catch (err) {
+        console.log("Error loading scanner");
+    }
 }
+
 
 
 // ===============================
@@ -309,7 +299,9 @@ function connectAccount() {
 loadScanner();
 async function loadScanner(){
 
-  // 🔐 CONNECT TO DERIV
+  // ===============================
+// 🔐 CONNECT TO DERIV (✅ OUTSIDE)
+// ===============================
 async function connectDeriv() {
 
     const token = document.getElementById("tokenInput").value;
@@ -324,7 +316,7 @@ async function connectDeriv() {
 
     const data = await res.json();
 
-    console.log("CONNECT RESPONSE:", data); // 👈 DEBUG
+    console.log("CONNECT RESPONSE:", data);
 
     if (data.error) {
         document.getElementById("status").innerText = "❌ Failed to connect";
@@ -333,6 +325,8 @@ async function connectDeriv() {
 
     document.getElementById("status").innerText =
         `✅ Connected: ${data.loginid} | ${data.balance} ${data.currency}`;
+}
+
 }
 </script>
 
