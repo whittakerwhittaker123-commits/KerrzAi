@@ -12,7 +12,18 @@ account_info = {
     "currency": "USD"
 }
 
+imports
+
 app = Flask(__name__)
+
+functions (analyze, etc)
+
+@app.route("/")        ✅
+@app.route("/connect") ✅ ← HERE
+@app.route("/scan")    ✅
+
+if __name__ == "__main__":
+    app.run()
 
 # ===============================
 # 📡 MARKET DATA STORE
