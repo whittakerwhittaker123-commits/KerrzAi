@@ -1,137 +1,177 @@
-from flask import Flask, render_template, jsonify
-import websocket, json
+from flask import Flask, jsonify, render_template
+import websocket
+import json
 import numpy as np
 
 app = Flask(__name__)
 
-DERIV_APP_ID = "1089"
-
-PAIRS = ["R_10", "R_25", "R_50", "R_75", "R_100"]
+DERIV_APP_ID = 1089
 
 
-# ---------- DERIV DATA ----------
-def get_prices(symbol):
+# ================================
+# 📡 GET REAL DERIV PRICES
+# ================================
+
+def get_deriv_prices(symbol="R_100", count=100):
     ws = websocket.create_connection(
         f"wss://ws.derivws.com/websockets/v3?app_id={DERIV_APP_ID}"
     )
 
+    # Request tick history
     ws.send(json.dumps({
         "ticks_history": symbol,
-        "count": 60,
+        "count": count,
         "end": "latest",
         "style": "ticks"
     }))
 
-    res = json.loads(ws.recv())
+    data = json.loads(ws.recv())
     ws.close()
 
-    return [float(p) for p in res["history"]["prices"]]
+    prices = data["history"]["prices"]
+    return prices
 
 
-# ---------- INDICATORS ----------
-def rsi(prices, period=14):
+# ================================
+# 📊 INDICATORS
+# ================================
+
+def calculate_rsi(prices, period=14):
+    prices = np.array(prices)
     deltas = np.diff(prices)
-    gain = np.maximum(deltas, 0)
-    loss = np.abs(np.minimum(deltas, 0))
 
-    avg_gain = np.mean(gain[:period])
-    avg_loss = np.mean(loss[:period])
+    gains = np.where(deltas > 0, deltas, 0)
+    losses = np.where(deltas < 0, -deltas, 0)
 
-    rs = avg_gain / (avg_loss + 1e-10)
+    avg_gain = np.mean(gains[-period:])
+    avg_loss = np.mean(losses[-period:])
+
+    if avg_loss == 0:
+        return 100
+
+    rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
 
-def ema(prices, period=20):
-    ema_vals = [prices[0]]
-    k = 2 / (period + 1)
+def calculate_atr(prices, period=14):
+    prices = np.array(prices)
 
-    for p in prices[1:]:
-        ema_vals.append(p * k + ema_vals[-1] * (1 - k))
+    trs = []
+    for i in range(1, len(prices)):
+        tr = max(
+            abs(prices[i] - prices[i-1]),
+            abs(prices[i] - prices[i-1]),
+            abs(prices[i] - prices[i-1])
+        )
+        trs.append(tr)
 
-    return ema_vals
+    return np.mean(trs[-period:])
 
 
-# ---------- SMART MONEY LOGIC ----------
-def analyze(prices):
+# ================================
+# 🧠 SMART MONEY AI
+# ================================
 
-    rsi_val = rsi(prices)
-    ema_vals = ema(prices)
+def detect_trend(prices):
+    ema_fast = np.mean(prices[-10:])
+    ema_slow = np.mean(prices[-30:])
+    return "UPTREND" if ema_fast > ema_slow else "DOWNTREND"
 
-    price = prices[-1]
-    trend = "RANGE"
 
-    if price > ema_vals[-1]:
-        trend = "UPTREND"
-    elif price < ema_vals[-1]:
-        trend = "DOWNTREND"
+def detect_bos(prices):
+    if prices[-1] > max(prices[-20:-1]):
+        return "BULLISH BOS"
+    elif prices[-1] < min(prices[-20:-1]):
+        return "BEARISH BOS"
+    return "NONE"
 
-    # BOS (structure break)
-    high = max(prices[-10:])
-    low = min(prices[-10:])
 
-    bos = None
-    if price > high:
-        bos = "BOS_UP"
-    elif price < low:
-        bos = "BOS_DOWN"
+def detect_candle(prices):
+    return "BULLISH" if prices[-1] > prices[-2] else "BEARISH"
 
-    signal = "WAIT"
 
-    # ENTRY LOGIC
-    if trend == "UPTREND" and rsi_val < 40:
+def analyze_market(prices):
+    prices = np.array(prices)
+
+    trend = detect_trend(prices)
+    bos = detect_bos(prices)
+    candle = detect_candle(prices)
+    rsi = calculate_rsi(prices)
+    atr = calculate_atr(prices)
+
+    entry = prices[-1]
+
+    # SIGNAL LOGIC
+    if trend == "UPTREND" and rsi < 35:
         signal = "BUY"
-    elif trend == "DOWNTREND" and rsi_val > 60:
+    elif trend == "DOWNTREND" and rsi > 65:
         signal = "SELL"
-
-    # TP/SL
-    vol = np.std(prices)
-
-    if signal == "BUY":
-        entry = price
-        sl = entry - vol * 1.5
-        tp = entry + vol * 3
-
-    elif signal == "SELL":
-        entry = price
-        sl = entry + vol * 1.5
-        tp = entry - vol * 3
-
     else:
-        entry, tp, sl = price, "-", "-"
+        signal = "WAIT"
 
-    confidence = min(95, int(abs(rsi_val - 50) * 2))
+    # SL / TP (REAL)
+    if signal == "BUY":
+        sl = entry - (atr * 1.5)
+        tp = entry + (atr * 3)
+    elif signal == "SELL":
+        sl = entry + (atr * 1.5)
+        tp = entry - (atr * 3)
+    else:
+        sl = entry
+        tp = entry
+
+    confidence = int(min(95, abs(rsi - 50) + abs(entry - prices[-10])))
 
     return {
         "trend": trend,
         "signal": signal,
         "entry": round(entry, 2),
-        "tp": round(tp, 2) if tp != "-" else "-",
-        "sl": round(sl, 2) if sl != "-" else "-",
-        "rsi": round(rsi_val, 2),
+        "tp": round(tp, 2),
+        "sl": round(sl, 2),
         "bos": bos,
+        "candle": candle,
+        "rsi": round(rsi, 2),
         "confidence": confidence
     }
 
 
-# ---------- ROUTES ----------
+# ================================
+# 🌐 ROUTES
+# ================================
+
 @app.route("/")
 def home():
     return render_template("index.html")
 
 
-@app.route("/scan")
-def scan():
-    results = {}
+@app.route("/signal/<pair>")
+def signal(pair):
+    try:
+        prices = get_deriv_prices(pair)
 
-    for pair in PAIRS:
-        try:
-            prices = get_prices(pair)
-            results[pair] = analyze(prices)
-        except:
-            results[pair] = {"error": "Data failed"}
+        result = analyze_market(prices)
 
-    return jsonify(results)
+        return jsonify({
+            "pair": pair,
+            "signal": result["signal"],
+            "trend": result["trend"],
+            "entry": result["entry"],
+            "tp": result["tp"],
+            "sl": result["sl"],
+            "bos": result["bos"],
+            "candle": result["candle"],
+            "rsi": result["rsi"],
+            "confidence": result["confidence"],
+            "prices": prices
+        })
 
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
+# ================================
+# 🚀 RUN
+# ================================
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
