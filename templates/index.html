@@ -287,7 +287,33 @@ function connectAccount() {
 }
   setInterval(loadScanner, 4000);
 loadScanner();
+async function loadScanner(){
 
+  // 🔐 CONNECT TO DERIV
+async function connectDeriv() {
+
+    const token = document.getElementById("tokenInput").value;
+
+    const res = await fetch("/connect", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ token: token })
+    });
+
+    const data = await res.json();
+
+    console.log("CONNECT RESPONSE:", data); // 👈 DEBUG
+
+    if (data.error) {
+        document.getElementById("status").innerText = "❌ Failed to connect";
+        return;
+    }
+
+    document.getElementById("status").innerText =
+        `✅ Connected: ${data.loginid} | ${data.balance} ${data.currency}`;
+}
 </script>
 
 </body>
