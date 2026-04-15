@@ -11,7 +11,7 @@ async function loadData() {
         document.getElementById("signal").innerText = data.signal;
         document.getElementById("rsi").innerText = "RSI: " + data.rsi;
 
-        // 👇 ADD THESE (fix undefined issue)
+        //  ADD THESE (fix undefined issue)
         document.getElementById("tradeBox").innerHTML = `
             <h2>${data.pair}</h2>
             <p><b>Trend:</b> ${data.trend}</p>
