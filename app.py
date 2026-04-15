@@ -161,36 +161,6 @@ def analyze_market(prices):
     }
 
 
-# ================================
-# 🌐 ROUTES
-# ================================
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-
-@app.route("/signal/<pair>")
-def signal(pair):
-
-    prices = market_data.get(pair, [])
-
-    if len(prices) < 50:
-        return jsonify({"error": "Waiting for data..."})
-
-    result = analyze_market(prices)
-
-    return jsonify({
-        "pair": pair,
-        "prices": prices[-50:],
-        "signal": result["signal"],
-        "trend": result["trend"],
-        "entry": result["entry"],
-        "tp": result["tp"],
-        "sl": result["sl"],
-        "bos": result["bos"],
-        "rsi": result["rsi"],
-        "confidence": result["confidence"]
-    })
 
 
 # ================================
