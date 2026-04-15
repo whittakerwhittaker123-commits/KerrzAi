@@ -214,6 +214,7 @@ const TOKENS = {
     demo: "***********hZzp",
     real: "PASTE_REAL_TOKEN_HERE"
 };
+    connectDeriv("demo");
 </script>
     let ws;
 
@@ -242,6 +243,8 @@ function connectDeriv(accountType) {
     };
 }
 </script>
-
+document.getElementById("accountType").addEventListener("change", (e) => {
+    connectDeriv(e.target.value);
+});
 </body>
 </html>
