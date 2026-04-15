@@ -22,7 +22,7 @@ functions (analyze, etc)
 @app.route("/connect") 
 @app.route("/scan")    
 
-if __name__ == "__main__":
+name__ == "__main__":
     app.run(debug=True)
 
 # ===============================
@@ -288,36 +288,18 @@ def scan():
     results = {}
 
     for pair, prices in market_data.items():
-
-        if len(prices) < 20:
-            results[pair] = {
-                "signal": "WAIT",
-                "trend": "WAITING DATA",
-                "entry": 0,
-                "tp": 0,
-                "sl": 0,
-                "bos": "NONE",
-                "confidence": 0
-            }
+        if len(prices) < 50:
             continue
 
         data = analyze(prices)
-
-        results[pair] = {
-            "signal": data["signal"],
-            "trend": data["trend"],
-            "entry": data["entry"],
-            "tp": data["tp"],
-            "sl": data["sl"],
-            "bos": data["bos"],
-            "confidence": data["confidence"]
-        }
+        if data:
+            results[pair] = data
 
     return jsonify(results)
 
 
-# ==============================# ===============================
-# 🚀 RUN SERVER
+# ===============================
+# RUN SERVER
 # ===============================
 if __name__ == "__main__":
     app.run(debug=True)
