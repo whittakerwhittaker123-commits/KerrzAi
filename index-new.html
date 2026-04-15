@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KerrzAI 🤖</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #0b1220;
+    color: white;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 30%;
+    background: #111827;
+    padding: 15px;
+}
+
+.option {
+    background: #1f2937;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+/* Main */
+.main {
+    width: 70%;
+    padding: 15px;
+}
+
+.card {
+    background: #1f2937;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+}
+
+.buy { background: #16a34a; }
+.sell { background: #dc2626; }
+
+/* Themes */
+.dark { background: #0b1220; }
+.blue { background: #0f172a; }
+.purple { background: #1e1b4b; }
+
+@media(max-width:768px){
+    .container { flex-direction: column; }
+    .sidebar, .main { width: 100%; }
+}
+</style>
+</head>
+
+<body class="dark">
+
+<div class="container">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+
+    <h2>⚙️ Settings</h2>
+
+    <!-- Pair Selector -->
+    <div class="option">
+        Pair:
+        <select id="pairSelect">
+            <option value="R_100">Volatility 100</option>
+            <option value="R_50">Volatility 50</option>
+            <option value="R_25">Volatility 25</option>
+        </select>
+    </div>
+
+    <!-- Theme -->
+    <div class="option">
+        Theme:
+        <select onchange="changeTheme(this.value)">
+            <option value="dark">Dark</option>
+            <option value="blue">Blue</option>
+            <option value="purple">Purple</option>
+        </select>
+    </div>
+
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+    <h1>KerrzAI 🤖</h1>
+
+    <!-- Chart -->
+    <div class="card">
+        <canvas id="chart"></canvas>
+    </div>
+
+    <!-- Signal -->
+    <div class="card">
+        <h2 id="signal">Signal: Loading...</h2>
+        <p>RSI: <span id="rsi">--</span></p>
+    </div>
+
+    <button class="buy">BUY</button>
+    <button class="sell">SELL</button>
+
+</div>
+
+</div>
+
+<script>
+let ws;
+let prices = [];
+let currentPair = "R_100";
+
+// Chart
+const ctx = document.getElementById('chart');
+let chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: 'Price',
+            data: [],
+            borderWidth: 2
+        }]
+    },
+    options: {
+        scales: { x: { display: false } }
+    }
+});
+
+// Connect WS
+function connect(pair) {
+    if (ws) ws.close();
+
+    ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+
+    ws.onopen = () => {
+        ws.send(JSON.stringify({ ticks: pair }));
+    };
+
+    ws.onmessage = (msg) => {
+        const data = JSON.parse(msg.data);
+
+        if (data.tick) {
+            const price = data.tick.quote;
+
+            prices.push(price);
+            if (prices.length > 30) prices.shift();
+
+            // Chart update
+            chart.data.labels.push("");
+            chart.data.datasets[0].data.push(price);
+
+            if (chart.data.labels.length > 30) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+
+            chart.update();
+
+            // RSI
+            if (prices.length >= 14) {
+                const rsi = calculateRSI(prices);
+                document.getElementById("rsi").innerText = rsi.toFixed(2);
+
+                let signal = "HOLD";
+
+                if (rsi < 30) signal = "BUY";
+                else if (rsi > 70) signal = "SELL";
+
+                document.getElementById("signal").innerText = "Signal: " + signal;
+
+                // 🔥 Liquidity background
+                if (signal === "BUY") {
+                    document.body.style.background = "#052e16"; // green
+                } else if (signal === "SELL") {
+                    document.body.style.background = "#450a0a"; // red
+                }
+            }
+        }
+    };
+}
+
+// RSI
+function calculateRSI(prices) {
+    let gains = 0, losses = 0;
+
+    for (let i = 1; i < prices.length; i++) {
+        let diff = prices[i] - prices[i-1];
+        if (diff > 0) gains += diff;
+        else losses -= diff;
+    }
+
+    let avgGain = gains / prices.length;
+    let avgLoss = losses / prices.length;
+
+    if (avgLoss === 0) return 100;
+
+    let rs = avgGain / avgLoss;
+    return 100 - (100 / (1 + rs));
+}
+
+// Change pair
+document.getElementById("pairSelect").addEventListener("change", (e) => {
+    currentPair = e.target.value;
+    prices = [];
+    chart.data.labels = [];
+    chart.data.datasets[0].data = [];
+    connect(currentPair);
+});
+
+// Theme change
+function changeTheme(theme) {
+    document.body.className = theme;
+}
+
+// Start
+connect(currentPair);
+</script>
+
+</body>
+</html>
