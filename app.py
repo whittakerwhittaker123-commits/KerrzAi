@@ -240,7 +240,46 @@ def home():
 @app.route("/balance")
 def balance():
     return jsonify(account_info)
+# ===============================
+# 🔐 CONNECT DERIV (PASTE HERE)
+# ===============================
+@app.route("/connect", methods=["POST"])
+def connect():
+    try:
+        data = request.json
+        token = data.get("token")
 
+        import websocket
+        import json
+
+        ws = websocket.WebSocket()
+        ws.connect("wss://ws.derivws.com/websockets/v3?app_id=1089")
+
+        ws.send(json.dumps({"authorize": token}))
+        response = json.loads(ws.recv())
+
+        print("DERIV RESPONSE:", response)
+
+        if "error" in response:
+            return jsonify({"error": "Invalid token"})
+
+        account = response["authorize"]
+
+        return jsonify({
+            "balance": account["balance"],
+            "currency": account["currency"]
+        })
+
+    except Exception as e:
+        print("CONNECT ERROR:", str(e))
+        return jsonify({"error": str(e)})
+
+
+# ===============================
+# 📡 SCAN
+# ===============================
+@app.route("/scan")
+def scan():
 @app.route("/scan")
 def scan():
 
