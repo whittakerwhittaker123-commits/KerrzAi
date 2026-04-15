@@ -235,7 +235,9 @@ def analyze(pair, prices):
 @app.route("/")
 def home():
     return render_template("index.html")
-
+@app.route("/balance")
+def balance():
+    return jsonify(account_info)
 
 @app.route("/scan")
 def scan():
