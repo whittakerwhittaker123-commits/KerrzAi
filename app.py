@@ -116,9 +116,12 @@ def signal():
 
 
 # ✅ START STREAMS AFTER APP LOAD (IMPORTANT FIX)
-@app.before_first_request
+@app.before_request
 def start_background():
-    start_streams()
+    global started
+    if not started:
+        start_streams()
+        started = True
 
 
 # ✅ RUN APP
