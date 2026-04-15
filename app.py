@@ -222,9 +222,18 @@ def scan():
     for pair, prices in market_data.items():
 
         data = analyze(pair, prices)
-
-        if not data:
-            continue
+if not data:
+    results[pair] = {
+        "pair": pair,
+        "trend": "WAITING DATA",
+        "signal": "WAIT",
+        "entry": 0,
+        "tp": 0,
+        "sl": 0,
+        "bos": "N/A",
+        "confidence": 0
+    }
+    continue
 
         if data["confidence"] < min_conf:
             continue
