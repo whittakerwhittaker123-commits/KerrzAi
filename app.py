@@ -5,12 +5,13 @@ import json
 import threading
 TOKENS = {
     "demo": "YOUR_DEMO_TOKEN",
-    "real": "REAL_TOKEN"}
-    account_info = {
+    "real": "REAL_TOKEN"
+}
+account_info = {
     "balance": 0,
     "currency": "USD"
 }
-}
+
 app = Flask(__name__)
 
 # ===============================
