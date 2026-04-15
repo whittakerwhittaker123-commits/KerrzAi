@@ -56,8 +56,15 @@ def start_all():
 # 🧠 SIMPLE AI ANALYSIS
 # ===============================
 def analyze(prices):
-    if len(prices) < 50:
-        return None
+    if len(prices) < 10:
+    return {
+        "signal": "WAIT",
+        "trend": "WAITING DATA",
+        "entry": 0,
+        "tp": 0,
+        "sl": 0,
+        "confidence": 0
+    }
 
     current = prices[-1]
     avg = np.mean(prices[-20:])
@@ -102,10 +109,14 @@ def scan():
 
     for pair, prices in market_data.items():
         data = analyze(prices)
-        if data:
-            results[pair] = data
-
-    return jsonify(results)
+        results[pair] = data if data else {
+    "signal": "WAIT",
+    "trend": "NO DATA",
+    "entry": 0,
+    "tp": 0,
+    "sl": 0,
+    "confidence": 0
+}
 
 
 @app.route("/connect", methods=["POST"])
