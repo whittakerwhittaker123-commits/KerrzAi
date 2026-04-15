@@ -117,20 +117,40 @@ body {
 <!-- 🔥 PAIRS -->
   <!-- 🔐 DERIV LOGIN PANEL -->
 <div class="login-box">
+  <div class="trade-box">
+
   <h3>🔐 Connect Deriv</h3>
 
-  <select id="accountType">
+  <!-- Account Type -->
+  <select id="accountType" style="width:100%;padding:10px;margin-bottom:10px;">
     <option value="demo">Demo</option>
     <option value="real">Real</option>
   </select>
 
-  <input id="tokenInput" placeholder="Enter API Token" />
+  <!-- Token Input -->
+  <input 
+    id="tokenInput" 
+    placeholder="Enter Deriv token"
+    style="width:100%;padding:10px;margin-bottom:10px;border-radius:10px;border:none;"
+  >
 
-  <button onclick="connectAccount()">Connect</button>
+  <!-- ✅ CONNECT BUTTON -->
+  <button onclick="connectDeriv()" style="
+    width:100%;
+    padding:12px;
+    background:#16213e;
+    color:white;
+    border:none;
+    border-radius:10px;
+    font-weight:bold;
+  ">
+    Connect
+  </button>
 
-  <p id="loginStatus">connected</p>
+  <!-- ✅ STATUS TEXT -->
+  <p id="status" style="margin-top:10px;">Not connected</p>
+
 </div>
-<div id="grid" class="grid"></div>
 
 <!-- 🔥 TRADE DETAILS -->
 <div id="tradeBox" class="trade-box">
