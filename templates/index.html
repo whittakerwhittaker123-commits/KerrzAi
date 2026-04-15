@@ -262,7 +262,30 @@ document.getElementById("minConf").addEventListener("input", (e) => {
 // ===============================
 // 🔄 AUTO REFRESH
 // ===============================
-setInterval(loadScanner, 4000);
+function connectAccount() {
+  const token = document.getElementById("tokenInput").value;
+  const type = document.getElementById("accountType").value;
+
+  fetch("/connect", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      token: token,
+      type: type
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("loginStatus").innerText =
+      "✅ Connected: " + data.balance + " " + data.currency;
+  })
+  .catch(() => {
+    document.getElementById("loginStatus").innerText = "❌ Failed";
+  });
+}
+  setInterval(loadScanner, 4000);
 loadScanner();
 
 </script>
