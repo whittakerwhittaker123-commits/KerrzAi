@@ -1,167 +1,205 @@
-from flask import Flask, jsonify, render_template
-import websocket, json, threading
-import numpy as np
-import pandas as pd
+<!DOCTYPE html>
+<html>
+<head>
+<title>KerrzAI 💰</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-app = Flask(__name__)
-
-# ======================
-# 📡 MARKET DATA STORE
-# ======================
-market_data = {
-    "R_10": [], "R_25": [], "R_50": [], "R_75": [], "R_100": []
+<style>
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg,#0f172a,#1e293b);
+  color: white;
+  padding: 15px;
 }
 
-# ======================
-# 📡 DERIV STREAM
-# ======================
-def start_ws(symbol):
-    def on_message(ws, message):
-        data = json.loads(message)
+/* HEADER */
+h2 {
+  margin-bottom: 15px;
+}
 
-        if "tick" in data:
-            price = data["tick"]["quote"]
-            market_data[symbol].append(price)
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
 
-            if len(market_data[symbol]) > 200:
-                market_data[symbol].pop(0)
+/* CARDS */
+.card {
+  background: linear-gradient(135deg,#fda4af,#fbcfe8);
+  color: black;
+  padding: 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
 
-    def on_open(ws):
-        ws.send(json.dumps({"ticks": symbol, "subscribe": 1}))
+.card:hover {
+  transform: scale(1.05);
+}
 
-    ws = websocket.WebSocketApp(
-        "wss://ws.derivws.com/websockets/v3?app_id=1089",
-        on_message=on_message,
-        on_open=on_open
-    )
+/* SIGNAL COLORS */
+.buy { border-left: 6px solid #22c55e; }
+.sell { border-left: 6px solid #ef4444; }
+.wait { border-left: 6px solid #f59e0b; }
 
-    ws.run_forever()
+/* TRADE BOX */
+.trade-box {
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg,#fff,#f1f5f9);
+  color: black;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
 
-def start_all():
-    for pair in market_data:
-        threading.Thread(target=start_ws, args=(pair,), daemon=True).start()
+/* SECTION DIVIDER */
+hr {
+  margin: 10px 0;
+}
 
-start_all()
+/* CONFIDENCE BAR */
+.conf-bar {
+  height: 10px;
+  background: #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 10px;
+}
 
-# ======================
-# 📊 INDICATORS
-# ======================
-def rsi(prices, period=14):
-    if len(prices) < period: return 50
-    delta = np.diff(prices)
-    gain = np.maximum(delta, 0)
-    loss = np.abs(np.minimum(delta, 0))
-    rs = np.mean(gain[-period:]) / (np.mean(loss[-period:]) + 1e-9)
-    return round(100 - (100 / (1 + rs)), 2)
+.conf-fill {
+  height: 100%;
+  background: linear-gradient(90deg,#22c55e,#4ade80);
+}
 
-def ema(prices, period=20):
-    return pd.Series(prices).ewm(span=period).mean().iloc[-1]
+/* DASHBOARD */
+.dashboard {
+  display: flex;
+  justify-content: space-between;
+  background: linear-gradient(135deg,#fbcfe8,#fda4af);
+  padding: 15px;
+  border-radius: 20px;
+  margin-top: 15px;
+  color: black;
+  font-weight: bold;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
 
-def atr(prices, period=14):
-    trs = [abs(prices[i]-prices[i-1]) for i in range(1,len(prices))]
-    return np.mean(trs[-period:]) if len(trs) >= period else 0
+/* MOBILE */
+@media(max-width:600px){
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
 
-# ======================
-# 🧠 CANDLE PATTERNS
-# ======================
-def bullish_engulfing(prices):
-    if len(prices) < 3: return False
-    return prices[-1] > prices[-2] and prices[-2] < prices[-3]
+<body>
 
-def bearish_engulfing(prices):
-    if len(prices) < 3: return False
-    return prices[-1] < prices[-2] and prices[-2] > prices[-3]
+<h2>KerrzAI Scanner 🤖</h2>
 
-# ======================
-# 🧠 SMART MONEY AI
-# ======================
-def analyze(prices):
-    if len(prices) < 50:
-        return None
+<!-- 🔥 PAIR BOXES -->
+<div id="grid" class="grid"></div>
 
-    current = prices[-1]
-    trend = "UPTREND" if current > ema(prices) else "DOWNTREND"
+<!-- 🔥 TRADE DETAILS -->
+<div id="tradeBox" class="trade-box">
+  Click a pair 👇
+</div>
 
-    # BOS
-    high = max(prices[-20:])
-    low = min(prices[-20:])
-    bos = "NONE"
-    if current > high: bos = "BULLISH BOS"
-    elif current < low: bos = "BEARISH BOS"
+<!-- 🔥 DASHBOARD -->
+<div class="dashboard">
+  <div>Wins: <span id="wins">0</span></div>
+  <div>Loss: <span id="loss">0</span></div>
+  <div>Confidence: <span id="conf">0%</span></div>
+</div>
 
-    # RSI
-    r = rsi(prices)
+<script>
 
-    # Candle patterns
-    bull = bullish_engulfing(prices)
-    bear = bearish_engulfing(prices)
+// ===============================
+// 📡 LOAD SCANNER DATA
+// ===============================
+async function loadScanner(){
+  try {
+    const res = await fetch('/scan');
+    const data = await res.json();
 
-    # SIGNAL LOGIC (SMART)
-    signal = "WAIT"
+    let grid = document.getElementById("grid");
+    grid.innerHTML = "";
 
-    if trend == "UPTREND" and r < 40 and bull:
-        signal = "BUY 👇"
+    Object.keys(data).forEach(pair => {
 
-    elif trend == "DOWNTREND" and r > 60 and bear:
-        signal = "SELL 👇"
+      let d = data[pair];
 
-    # ATR SL/TP
-    a = atr(prices)
-    entry = current
+      let card = document.createElement("div");
 
-    if "BUY" in signal:
-        sl = entry - (a * 2)
-        tp = entry + (a * 3)
-    elif "SELL" in signal:
-        sl = entry + (a * 2)
-        tp = entry - (a * 3)
-    else:
-        sl, tp = entry, entry
+      // 🔥 SIGNAL COLORS
+      let type = "wait";
+      if ((d.signal || "").includes("BUY")) type = "buy";
+      if ((d.signal || "").includes("SELL")) type = "sell";
 
-    # Confidence scoring
-    confidence = 50
-    if signal != "WAIT":
-        confidence += 20
-    if bos != "NONE":
-        confidence += 10
-    if bull or bear:
-        confidence += 10
-    confidence = min(confidence, 95)
+      card.className = "card " + type;
 
-    return {
-        "signal": signal,
-        "trend": trend,
-        "entry": round(entry,2),
-        "tp": round(tp,2),
-        "sl": round(sl,2),
-        "bos": bos,
-        "rsi": r,
-        "confidence": confidence
-    }
+      card.innerHTML = `
+        <h3>${pair}</h3>
+        <p><b>${d.signal || "WAIT"}</b></p>
+        <p>${d.trend || "Analyzing..."}</p>
+        <p>${d.confidence || 0}% confidence</p>
+      `;
 
-# ======================
-# 🌐 ROUTES
-# ======================
-@app.route("/")
-def home():
-    return render_template("index.html")
+      card.onclick = () => showTrade(pair, d);
 
-@app.route("/scan")
-def scan():
-    results = {}
+      grid.appendChild(card);
+    });
 
-    for pair, prices in market_data.items():
-        if len(prices) < 50:
-            continue
+  } catch (err) {
+    console.log("Error loading scanner", err);
+  }
+}
 
-        data = analyze(prices)
-        if data:
-            results[pair] = data
 
-    return jsonify(results)
+// ===============================
+// 📊 SHOW TRADE DETAILS
+// ===============================
+function showTrade(pair, d){
 
-# ======================
-# 🚀 RUN
-# ======================
-if __name__ == "__main__":
-    app.run()
+  let confidence = d.confidence || 0;
+
+  document.getElementById("tradeBox").innerHTML = `
+    <h2>${pair}</h2>
+
+    <p><b>Trend:</b> ${d.trend || "-"}</p>
+    <p><b>Signal:</b> ${d.signal || "-"}</p>
+
+    <hr>
+
+    <p><b>Entry:</b> ${d.entry || "-"}</p>
+    <p><b>Take Profit:</b> ${d.tp || "-"}</p>
+    <p><b>Stop Loss:</b> ${d.sl || "-"}</p>
+
+    <hr>
+
+    <p><b>BOS:</b> ${d.bos || "-"}</p>
+
+    <p><b>Confidence:</b> ${confidence}%</p>
+
+    <div class="conf-bar">
+      <div class="conf-fill" style="width:${confidence}%"></div>
+    </div>
+  `;
+
+  // Dashboard update
+  document.getElementById("conf").innerText = confidence + "%";
+}
+
+
+// ===============================
+// 🔄 AUTO REFRESH
+// ===============================
+setInterval(loadScanner, 4000);
+loadScanner();
+
+</script>
+
+</body>
+</html>
