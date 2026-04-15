@@ -350,6 +350,7 @@ async function connectDeriv() {
 }
 </script>
 <script>
+  console.log("SCAN DATA:", data);
 async function loadPairs() {
     const res = await fetch("/scan");
     const data = await res.json();
