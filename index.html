@@ -111,14 +111,10 @@ input:checked + .slider:before {
     <!-- CHART -->
     <div class="card">
         <div id="pairsGrid" class="grid"></div>
-
-}   
+  
 
     <!-- SIGNAL -->
-    <div class="card">
-        <h2 id="signal">Signal: Loading...</h2>
-        <p>RSI: <span id="rsi">--</span></p>
-    </div>
+    
 
     <!-- BUTTONS -->
     <button class="buy">BUY</button>
@@ -224,6 +220,65 @@ function calculateRSI(prices) {
     return 100 - (100 / (1 + rs));
 }
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
 
+    const pairs = ["R_10","R_25","R_50","R_75","R_100"];
+    const grid = document.getElementById("pairsGrid");
+
+    pairs.forEach(pair => {
+        let card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+            <h4>${pair}</h4>
+            <p id="trend-${pair}">Trend: ...</p>
+            <p id="rsi-${pair}">RSI: ...</p>
+            <span id="signal-${pair}" class="badge wait">WAIT</span>
+        `;
+        grid.appendChild(card);
+
+        startPair(pair);
+    });
+
+    function startPair(symbol) {
+        let ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+        let prices = [];
+
+        ws.onopen = () => {
+            ws.send(JSON.stringify({
+                ticks: symbol,
+                subscribe: 1
+            }));
+        };
+
+        ws.onmessage = (msg) => {
+            let data = JSON.parse(msg.data);
+
+            if (data.tick) {
+                let price = data.tick.quote;
+
+                prices.push(price);
+                if (prices.length > 20) prices.shift();
+
+                if (prices.length >= 10) {
+                    let trend = price > prices[0] ? "UP" : "DOWN";
+                    let signal = trend === "UP" ? "BUY" : "SELL";
+
+                    updateUI(symbol, trend, signal);
+                }
+            }
+        };
+    }
+
+    function updateUI(pair, trend, signal) {
+        document.getElementById(`trend-${pair}`).innerText = "Trend: " + trend;
+
+        let badge = document.getElementById(`signal-${pair}`);
+        badge.innerText = signal;
+        badge.className = "badge " + signal.toLowerCase();
+    }
+
+});
+</script>
 </body>
 </html>
