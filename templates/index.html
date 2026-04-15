@@ -212,6 +212,32 @@ const TOKENS = {
     real: "PASTE_REAL_TOKEN_HERE"
 };
 </script>
+    let ws;
+
+function connectDeriv(accountType) {
+    if (ws) ws.close();
+
+    ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+
+    ws.onopen = () => {
+        ws.send(JSON.stringify({
+            authorize: TOKENS[accountType]
+        }));
+    };
+
+    ws.onmessage = (msg) => {
+        let data = JSON.parse(msg.data);
+
+        // ✅ Logged in
+        if (data.authorize) {
+            console.log("Logged in:", data.authorize.loginid);
+
+            // show balance
+            document.getElementById("balance").innerText =
+                data.authorize.balance + " " + data.authorize.currency;
+        }
+    };
+}
 </script>
 
 </body>
