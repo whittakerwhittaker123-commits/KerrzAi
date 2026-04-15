@@ -29,6 +29,7 @@ def start_ws(symbol):
             price = data["tick"]["quote"]
             market_data[symbol].append(price)
 
+            # keep last 200 prices
             if len(market_data[symbol]) > 200:
                 market_data[symbol].pop(0)
 
@@ -47,6 +48,7 @@ def start_ws(symbol):
     ws.run_forever()
 
 
+# start all pairs
 for pair in market_data:
     threading.Thread(target=start_ws, args=(pair,), daemon=True).start()
 
@@ -55,7 +57,9 @@ for pair in market_data:
 # 📊 INDICATORS
 # ===============================
 def ema(prices, period=20):
-    return np.mean(prices[-period:]) if len(prices) >= period else prices[-1]
+    if len(prices) < period:
+        return prices[-1]
+    return np.mean(prices[-period:])
 
 
 def rsi(prices, period=14):
@@ -75,14 +79,14 @@ def rsi(prices, period=14):
 
 def atr(prices, period=14):
     if len(prices) < period:
-        return 0
+        return 1  # prevent zero SL
 
     diffs = [abs(prices[i] - prices[i-1]) for i in range(1, len(prices))]
     return np.mean(diffs[-period:])
 
 
 # ===============================
-# 🕯 CANDLE PATTERNS
+# 🕯 PATTERNS
 # ===============================
 def bullish_engulfing(prices):
     if len(prices) < 3:
@@ -97,60 +101,53 @@ def bearish_engulfing(prices):
 
 
 # ===============================
-# 🧠 SMART MONEY LOGIC
+# 🧠 BOS (SMART MONEY)
 # ===============================
 def break_of_structure(prices):
     if len(prices) < 20:
         return "NONE"
 
-    recent_high = max(prices[-20:-5])
-    recent_low = min(prices[-20:-5])
+    high = max(prices[-20:-5])
+    low = min(prices[-20:-5])
     current = prices[-1]
 
-    if current > recent_high:
+    if current > high:
         return "BULLISH BOS"
-    elif current < recent_low:
+    elif current < low:
         return "BEARISH BOS"
-    else:
-        return "NONE"
+    return "NONE"
 
 
 # ===============================
-# 🔥 MAIN AI ANALYSIS
+# 🔥 AI ANALYSIS
 # ===============================
 def analyze(pair, prices):
 
+    # 🔥 FIX: ALWAYS RETURN DATA (no blank UI)
     if len(prices) < 10:
-    return {
-        "pair": pair,
-        "trend": "LOADING...",
-        "signal": "WAIT",
-        "entry": 0,
-        "tp": 0,
-        "sl": 0,
-        "bos": "N/A",
-        "confidence": 0
-    }
+        return {
+            "pair": pair,
+            "trend": "WAITING DATA",
+            "signal": "WAIT",
+            "entry": 0,
+            "tp": 0,
+            "sl": 0,
+            "bos": "N/A",
+            "confidence": 0
+        }
 
     current = prices[-1]
 
-    # indicators
     ema_val = ema(prices)
     rsi_val = rsi(prices)
     atr_val = atr(prices)
-
     bos = break_of_structure(prices)
 
-    # trend
     trend = "UPTREND" if current > ema_val else "DOWNTREND"
 
-    # patterns
     bull = bullish_engulfing(prices)
     bear = bearish_engulfing(prices)
 
-    # ===============================
-    # 🎯 SIGNAL LOGIC (LEVEL 3)
-    # ===============================
     signal = "WAIT"
 
     if trend == "UPTREND" and rsi_val < 40 and bull:
@@ -160,7 +157,7 @@ def analyze(pair, prices):
         signal = "SELL"
 
     # ===============================
-    # 💰 ENTRY / SL / TP
+    # 💰 ENTRY / TP / SL
     # ===============================
     entry = current
 
@@ -173,20 +170,21 @@ def analyze(pair, prices):
         tp = entry - (atr_val * 4)
 
     else:
-        sl = tp = 0
+        sl = entry
+        tp = entry
 
     # ===============================
-    # 📊 CONFIDENCE SYSTEM
+    # 📊 CONFIDENCE
     # ===============================
     confidence = 50
 
-    if trend == "UPTREND" or trend == "DOWNTREND":
-        confidence += 10
-
-    if bull or bear:
-        confidence += 15
+    if signal != "WAIT":
+        confidence += 20
 
     if bos != "NONE":
+        confidence += 15
+
+    if bull or bear:
         confidence += 15
 
     confidence = min(confidence, 95)
@@ -215,30 +213,33 @@ def home():
 def scan():
 
     mode = request.args.get("mode", "Sniper")
-    min_conf = int(request.args.get("min_conf", 60))
+    min_conf = int(request.args.get("min_conf", 10))  # 🔥 FIXED
 
     results = {}
 
     for pair, prices in market_data.items():
 
         data = analyze(pair, prices)
-if not data:
-    results[pair] = {
-        "pair": pair,
-        "trend": "WAITING DATA",
-        "signal": "WAIT",
-        "entry": 0,
-        "tp": 0,
-        "sl": 0,
-        "bos": "N/A",
-        "confidence": 0
-    }
-    continue
 
-        if data["confidence"] < min_conf:
+        # 🔥 ALWAYS SHOW PAIRS
+        if not data:
+            results[pair] = {
+                "pair": pair,
+                "trend": "WAITING",
+                "signal": "WAIT",
+                "entry": 0,
+                "tp": 0,
+                "sl": 0,
+                "bos": "N/A",
+                "confidence": 0
+            }
             continue
 
-        results[pair] = data
+        # filter (but not too strict)
+        if data["confidence"] < min_conf:
+            results[pair] = data
+        else:
+            results[pair] = data
 
     return jsonify(results)
 
