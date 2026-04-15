@@ -7,7 +7,7 @@ from flask import Flask, jsonify, render_template, request
 app = Flask(__name__)
 
 DERIV_APP_ID = "1089"
-
+started = False  # ✅ ADD THIS
 # 🔥 STORE LIVE PRICES
 price_data = {
     "R_100": [],
