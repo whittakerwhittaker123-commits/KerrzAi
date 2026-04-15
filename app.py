@@ -6,6 +6,10 @@ import threading
 TOKENS = {
     "demo": "hryJ9bhA3hxZhSq",
     "real": "REAL_TOKEN"
+    account_info = {
+    "balance": 0,
+    "currency": "USD"
+}
 }
 app = Flask(__name__)
 
