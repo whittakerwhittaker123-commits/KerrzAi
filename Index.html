@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KerrzAI 🤖</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #0b1220;
+    color: white;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 28%;
+    background: #111827;
+    padding: 15px;
+}
+
+.sidebar h2 {
+    margin-bottom: 15px;
+}
+
+.option {
+    background: #1f2937;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Main */
+.main {
+    width: 72%;
+    padding: 15px;
+}
+
+.card {
+    background: #1f2937;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+/* Chart */
+#chart {
+    height: 250px;
+}
+
+/* Buttons */
+button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    font-size: 18px;
+    border-radius: 8px;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.buy { background: #16a34a; }
+.sell { background: #dc2626; }
+
+/* Signal colors */
+.buy-text { color: #22c55e; }
+.sell-text { color: #ef4444; }
+
+/* Mobile */
+@media(max-width:768px){
+    .container { flex-direction: column; }
+    .sidebar, .main { width: 100%; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- LEFT -->
+<div class="sidebar">
+    <h2>⚙️ Strategies</h2>
+
+    <div class="option">RSI Strategy <input type="checkbox" checked></div>
+    <div class="option">Trend Strategy <input type="checkbox"></div>
+    <div class="option">AI Filter <input type="checkbox"></div>
+</div>
+
+<!-- RIGHT -->
+<div class="main">
+
+    <h1>KerrzAI 🤖</h1>
+
+    <!-- CHART -->
+    <div class="card">
+        <canvas id="chart"></canvas>
+    </div>
+
+    <!-- SIGNAL -->
+    <div class="card">
+        <h2 id="signal">Signal: Loading...</h2>
+        <p>RSI: <span id="rsi">--</span></p>
+    </div>
+
+    <!-- BUTTONS -->
+    <button class="buy">BUY</button>
+    <button class="sell">SELL</button>
+
+</div>
+
+</div>
+
+<!-- CHART JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Chart setup
+const ctx = document.getElementById('chart');
+let chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: 'Price',
+            data: [],
+            borderColor: '#38bdf8',
+            borderWidth: 2
+        }]
+    },
+    options: {
+        scales: {
+            x: { display: false }
+        }
+    }
+});
+
+// DERIV WS
+const ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+
+let prices = [];
+
+ws.onopen = () => {
+    ws.send(JSON.stringify({ ticks: "R_100" }));
+};
+
+ws.onmessage = (msg) => {
+    const data = JSON.parse(msg.data);
+
+    if (data.tick) {
+        const price = data.tick.quote;
+
+        // store prices
+        prices.push(price);
+        if (prices.length > 30) prices.shift();
+
+        // update chart
+        chart.data.labels.push("");
+        chart.data.datasets[0].data.push(price);
+
+        if (chart.data.labels.length > 30) {
+            chart.data.labels.shift();
+            chart.data.datasets[0].data.shift();
+        }
+
+        chart.update();
+
+        // RSI
+        if (prices.length >= 14) {
+            const rsi = calculateRSI(prices);
+            document.getElementById("rsi").innerText = rsi.toFixed(2);
+
+            let signal = "HOLD";
+            let color = "";
+
+            if (rsi < 30) {
+                signal = "BUY";
+                color = "buy-text";
+            } else if (rsi > 70) {
+                signal = "SELL";
+                color = "sell-text";
+            }
+
+            const signalEl = document.getElementById("signal");
+            signalEl.innerText = "Signal: " + signal;
+            signalEl.className = color;
+        }
+    }
+};
+
+// RSI
+function calculateRSI(prices) {
+    let gains = 0, losses = 0;
+
+    for (let i = 1; i < prices.length; i++) {
+        let diff = prices[i] - prices[i-1];
+        if (diff > 0) gains += diff;
+        else losses -= diff;
+    }
+
+    let avgGain = gains / prices.length;
+    let avgLoss = losses / prices.length;
+
+    if (avgLoss === 0) return 100;
+
+    let rs = avgGain / avgLoss;
+    return 100 - (100 / (1 + rs));
+}
+</script>
+
+</body>
+</html>
