@@ -1,33 +1,44 @@
-from flask import Flask, jsonify, render_template
-import websocket, json, threading
+from flask import Flask, jsonify, render_template, request
 import numpy as np
-import pandas as pd
+import websocket
+import json
+import threading
 
 app = Flask(__name__)
 
-# ======================
-# 📡 STORE DATA
-# ======================
+# ===============================
+# 📡 STORE MARKET DATA
+# ===============================
 market_data = {
-    "R_10": [], "R_25": [], "R_50": [], "R_75": [], "R_100": []
+    "R_10": [],
+    "R_25": [],
+    "R_50": [],
+    "R_75": [],
+    "R_100": []
 }
 
-# ======================
-# 📡 DERIV LIVE DATA
-# ======================
+# ===============================
+# 📡 DERIV WEBSOCKET
+# ===============================
 def start_ws(symbol):
+
     def on_message(ws, message):
         data = json.loads(message)
 
         if "tick" in data:
             price = data["tick"]["quote"]
+
             market_data[symbol].append(price)
 
-            if len(market_data[symbol]) > 200:
+            # keep last 100 prices only
+            if len(market_data[symbol]) > 100:
                 market_data[symbol].pop(0)
 
     def on_open(ws):
-        ws.send(json.dumps({"ticks": symbol, "subscribe": 1}))
+        ws.send(json.dumps({
+            "ticks": symbol,
+            "subscribe": 1
+        }))
 
     ws = websocket.WebSocketApp(
         "wss://ws.derivws.com/websockets/v3?app_id=1089",
@@ -37,15 +48,21 @@ def start_ws(symbol):
 
     ws.run_forever()
 
-def start_all():
-    for pair in market_data:
-        threading.Thread(target=start_ws, args=(pair,), daemon=True).start()
 
-start_all()
+# start all pairs
+for pair in market_data:
+    threading.Thread(target=start_ws, args=(pair,), daemon=True).start()
 
-# ======================
+
+# ===============================
 # 📊 INDICATORS
-# ======================
+# ===============================
+def ema(prices, period=10):
+    if len(prices) < period:
+        return None
+    return np.mean(prices[-period:])
+
+
 def rsi(prices, period=14):
     if len(prices) < period:
         return 50
@@ -54,104 +71,108 @@ def rsi(prices, period=14):
     gain = np.maximum(delta, 0)
     loss = np.abs(np.minimum(delta, 0))
 
-    rs = np.mean(gain[-period:]) / (np.mean(loss[-period:]) + 1e-9)
-    return round(100 - (100 / (1 + rs)), 2)
+    avg_gain = np.mean(gain[-period:])
+    avg_loss = np.mean(loss[-period:]) + 1e-9
 
-def ema(prices, period=20):
-    return pd.Series(prices).ewm(span=period).mean().iloc[-1]
+    rs = avg_gain / avg_loss
+    return 100 - (100 / (1 + rs))
+
 
 def atr(prices, period=14):
     if len(prices) < period:
         return 0
 
-    trs = [abs(prices[i] - prices[i-1]) for i in range(1, len(prices))]
-    return np.mean(trs[-period:])
+    diffs = [abs(prices[i] - prices[i-1]) for i in range(1, len(prices))]
+    return np.mean(diffs[-period:])
 
-# ======================
-# 🧠 ANALYSIS
-# ======================
-def analyze(prices):
-    if len(prices) < 50:
+
+# ===============================
+# 🧠 ANALYSIS ENGINE
+# ===============================
+def analyze(pair, prices):
+
+    if len(prices) < 20:
         return None
 
     current = prices[-1]
 
-    trend = "UPTREND" if current > ema(prices) else "DOWNTREND"
+    # indicators
+    ema_val = ema(prices)
+    rsi_val = rsi(prices)
+    atr_val = atr(prices)
 
-    high = max(prices[-20:])
-    low = min(prices[-20:])
+    # trend
+    trend = "UPTREND" if current > ema_val else "DOWNTREND"
 
-    bos = "NONE"
-    if current > high:
-        bos = "BULLISH BOS"
-    elif current < low:
-        bos = "BEARISH BOS"
-
-    r = rsi(prices)
-
-    signal = "WAIT"
-
-    if trend == "UPTREND" and r < 40:
-        signal = "BUY 👇"
-
-    elif trend == "DOWNTREND" and r > 60:
-        signal = "SELL 👇"
-
-    a = atr(prices)
-    entry = current
-
-    if "BUY" in signal:
-        sl = entry - (a * 2)
-        tp = entry + (a * 3)
-
-    elif "SELL" in signal:
-        sl = entry + (a * 2)
-        tp = entry - (a * 3)
-
+    # signal logic
+    if trend == "UPTREND" and rsi_val < 40:
+        signal = "BUY"
+    elif trend == "DOWNTREND" and rsi_val > 60:
+        signal = "SELL"
     else:
-        sl = entry
-        tp = entry
+        signal = "WAIT"
 
-    confidence = 50
-    if signal != "WAIT":
-        confidence += 20
-    if bos != "NONE":
-        confidence += 10
+    # 🔥 FIXED SL/TP (ATR BASED — NOT TOO TIGHT)
+    if signal == "BUY":
+        entry = current
+        sl = current - (atr_val * 2)
+        tp = current + (atr_val * 4)
+    elif signal == "SELL":
+        entry = current
+        sl = current + (atr_val * 2)
+        tp = current - (atr_val * 4)
+    else:
+        entry = tp = sl = 0
 
-    confidence = min(confidence, 95)
+    # confidence
+    confidence = int(abs(rsi_val - 50) * 2)
 
     return {
-        "signal": signal,
+        "pair": pair,
         "trend": trend,
+        "signal": signal,
         "entry": round(entry, 2),
         "tp": round(tp, 2),
         "sl": round(sl, 2),
-        "bos": bos,
-        "rsi": r,
+        "bos": "N/A",
         "confidence": confidence
     }
 
-# ======================
+
+# ===============================
 # 🌐 ROUTES
-# ======================
+# ===============================
 @app.route("/")
 def home():
     return render_template("index.html")
 
+
 @app.route("/scan")
 def scan():
+
+    mode = request.args.get("mode", "Sniper")
+    min_conf = int(request.args.get("min_conf", 70))
+
     results = {}
 
     for pair, prices in market_data.items():
-        data = analyze(prices)
 
-        if data:
-            results[pair] = data
+        data = analyze(pair, prices)
+
+        if not data:
+            continue
+
+        # filter by confidence
+        if data["confidence"] < min_conf:
+            continue
+
+        results[pair] = data
 
     return jsonify(results)
 
-# ======================
+
+# ===============================
 # 🚀 RUN
-# ======================
+# ===============================
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
