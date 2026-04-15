@@ -1,166 +1,114 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>KerrzAI 💅</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KerrzAI 💰</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body {
+  font-family: Arial;
+  background: linear-gradient(135deg,#1a1a2e,#16213e);
+  color: white;
+  padding: 10px;
+}
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-      background: linear-gradient(135deg, #1a1a2e, #16213e);
-      color: white;
-      padding: 15px;
-    }
+.grid {
+  display:grid;
+  grid-template-columns: repeat(2,1fr);
+  gap:10px;
+}
 
-    h1 {
-      text-align: center;
-    }
+.card {
+  background: linear-gradient(135deg,#ffb6c1,#ffc0cb);
+  color:black;
+  padding:15px;
+  border-radius:20px;
+  cursor:pointer;
+}
 
-    /* Grid */
-    .pairs-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 15px;
-    }
+.trade-box {
+  margin-top:15px;
+  padding:15px;
+  background:#fff0f5;
+  color:black;
+  border-radius:15px;
+}
 
-    .pair-card {
-      background: linear-gradient(135deg, #ffb6c1, #ffc0cb);
-      color: black;
-      padding: 15px;
-      border-radius: 20px;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-
-    .pair-card:hover {
-      transform: scale(1.05);
-    }
-
-    /* Trade Box */
-    .trade-box {
-      margin-top: 20px;
-      padding: 20px;
-      background: #fff0f5;
-      border-radius: 20px;
-      color: black;
-    }
-
-    /* Signal colors */
-    .buy { color: green; }
-    .sell { color: red; }
-    .wait { color: orange; }
-
-    /* Dashboard */
-    .dashboard {
-      display: flex;
-      justify-content: space-around;
-      background: #ffe4e1;
-      padding: 15px;
-      border-radius: 15px;
-      color: black;
-      margin-top: 20px;
-    }
-
-    canvas {
-      margin-top: 20px;
-      background: white;
-      border-radius: 10px;
-    }
-
-  </style>
+.dashboard {
+  display:flex;
+  justify-content:space-around;
+  background:#ffe4e1;
+  padding:10px;
+  border-radius:10px;
+  margin-top:10px;
+  color:black;
+}
+</style>
 </head>
 
 <body>
 
-<h1>KerrzAI 🤖</h1>
+<h2>KerrzAI Scanner 🤖</h2>
 
-<!-- PAIRS -->
-<div class="pairs-grid">
+<div id="grid" class="grid"></div>
 
-  <div class="pair-card" onclick="loadPair('R_10', 'Volatility 10')">
-    <h3>Volatility 10</h3>
-  </div>
-
-  <div class="pair-card" onclick="loadPair('R_25', 'Volatility 25')">
-    <h3>Volatility 25</h3>
-  </div>
-
-  <div class="pair-card" onclick="loadPair('R_50', 'Volatility 50')">
-    <h3>Volatility 50</h3>
-  </div>
-
-  <div class="pair-card" onclick="loadPair('R_75', 'Volatility 75')">
-    <h3>Volatility 75</h3>
-  </div>
-
-  <div class="pair-card" onclick="loadPair('R_100', 'Volatility 100')">
-    <h3>Volatility 100</h3>
-  </div>
-
-</div>
-
-<!-- TRADE BOX -->
 <div id="tradeBox" class="trade-box">
-  <h2>Select a pair</h2>
+Click a pair 👆
 </div>
 
-<!-- CHART -->
-<canvas id="chart"></canvas>
-
-<!-- DASHBOARD -->
 <div class="dashboard">
-  <div>Wins: <span id="wins">0</span></div>
-  <div>Losses: <span id="losses">0</span></div>
-  <div>Live Trades: <span id="live">0</span></div>
+<div>Wins: <span id="wins">0</span></div>
+<div>Loss: <span id="loss">0</span></div>
+<div>Confidence: <span id="conf">0%</span></div>
 </div>
 
 <script>
-let chart;
 
-async function loadPair(symbol, name) {
-
-  const res = await fetch(`/signal?symbol=${symbol}`);
+async function loadScanner(){
+  const res = await fetch('/scan');
   const data = await res.json();
 
-  // Update trade box
+  let grid = document.getElementById("grid");
+  grid.innerHTML = "";
+
+  Object.keys(data).forEach(pair => {
+
+    let d = data[pair];
+
+    let card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <h3>${pair}</h3>
+      <p>${d.signal}</p>
+      <p>${d.trend}</p>
+      <p>${d.confidence}%</p>
+    `;
+
+    card.onclick = () => showTrade(pair, d);
+
+    grid.appendChild(card);
+  });
+}
+
+function showTrade(pair, d){
   document.getElementById("tradeBox").innerHTML = `
-    <h2>${name}</h2>
-    <p><b>Trend:</b> ${data.trend}</p>
-    <p class="${data.signal.toLowerCase()}"><b>Signal:</b> ${data.signal}</p>
-    <p><b>Entry:</b> ${data.entry}</p>
-    <p><b>Take Profit:</b> ${data.tp}</p>
-    <p><b>Stop Loss:</b> ${data.sl}</p>
+    <h2>${pair}</h2>
+    <p>Trend: ${d.trend}</p>
+    <p>Signal: ${d.signal}</p>
+    <p>Entry: ${d.entry}</p>
+    <p>TP: ${d.tp}</p>
+    <p>SL: ${d.sl}</p>
+    <p>BOS: ${d.bos}</p>
+    <p>Confidence: ${d.confidence}%</p>
   `;
 
-  // Chart
-  if (chart) chart.destroy();
-
-  chart = new Chart(document.getElementById("chart"), {
-    type: "line",
-    data: {
-      labels: data.prices.map((_, i) => i),
-      datasets: [{
-        data: data.prices,
-        borderWidth: 2
-      }]
-    },
-    options: {
-      plugins: { legend: { display: false } }
-    }
-  });
-
-  // Dashboard update (simple demo logic)
-  if (data.signal === "BUY") {
-    document.getElementById("wins").innerText++;
-  } else if (data.signal === "SELL") {
-    document.getElementById("losses").innerText++;
-  }
-
-  document.getElementById("live").innerText = 1;
+  document.getElementById("conf").innerText = d.confidence + "%";
 }
+
+setInterval(loadScanner, 5000);
+loadScanner();
+
 </script>
 
 </body>
