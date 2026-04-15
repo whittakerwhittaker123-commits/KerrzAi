@@ -206,7 +206,7 @@ def analyze(pair, prices):
         "trend": trend,
         "signal": signal,
         "entry": round(entry, 2),
-        "tp": round(tp, 2),
+        "tp": round(tp, 4),
         "sl": round(sl, 2),
         "bos": bos,
         "confidence": confidence
