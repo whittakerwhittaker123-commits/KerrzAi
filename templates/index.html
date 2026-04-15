@@ -347,6 +347,39 @@ async function connectDeriv() {
 
 }
 </script>
+<script>
+async function loadPairs() {
+    const res = await fetch("/scan");
+    const data = await res.json();
 
+    const container = document.getElementById("pairsContainer");
+    container.innerHTML = "";
+
+    for (const pair in data) {
+        const d = data[pair];
+
+        const box = document.createElement("div");
+        box.className = "box";
+
+        box.innerHTML = `
+            <h3>${pair}</h3>
+            <p>${d.signal}</p>
+            <p>${d.trend}</p>
+            <p>Entry: ${d.entry || 0}</p>
+            <p>TP: ${d.tp || 0}</p>
+            <p>SL: ${d.sl || 0}</p>
+            <p>${d.confidence || 0}%</p>
+        `;
+
+        container.appendChild(box);
+    }
+}
+
+// 🔁 auto refresh every 3 seconds
+setInterval(loadPairs, 3000);
+
+// 🚀 load on start
+loadPairs();
+</script>
 </body>
 </html>
